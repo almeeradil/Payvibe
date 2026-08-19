@@ -1,0 +1,296 @@
+import { SystemSettings, SalesInvoice, Employee, PayrollRun } from '../types';
+
+export const numberToWords = (num: number): string => {
+  num = Math.floor(Math.abs(num || 0));
+  if (num === 0) return 'Zero';
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const below1000 = (n: number) => {
+    let str = '';
+    if (n >= 100) {
+      str += ones[Math.floor(n / 100)] + ' Hundred ';
+      n %= 100;
+    }
+    if (n >= 20) {
+      str += tens[Math.floor(n / 10)] + ' ';
+      n %= 10;
+    }
+    if (n > 0) str += ones[n] + ' ';
+    return str;
+  };
+  let words = '';
+  const units: [number, string][] = [
+    [10000000, 'Crore'],
+    [100000, 'Lac'],
+    [1000, 'Thousand']
+  ];
+  units.forEach(([div, name]) => {
+    if (num >= div) {
+      words += below1000(Math.floor(num / div)) + name + ' ';
+      num %= div;
+    }
+  });
+  words += below1000(num);
+  return words.replace(/\s+/g, ' ').trim();
+};
+
+export const printUniversalSlip = (
+  title: string,
+  dataObj: Record<string, any>,
+  settings: SystemSettings,
+  autoClose = false
+) => {
+  const s = settings;
+  const numKey = Object.keys(dataObj).find(k => /#$|^Ref|^Voucher|^Receipt|^Invoice/i.test(k));
+  const dateKey = Object.keys(dataObj).find(k => /date/i.test(k));
+  const docNumber = numKey ? dataObj[numKey] : '';
+  const docDate = dateKey ? dataObj[dateKey] : new Date().toISOString().split('T')[0];
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title} ${docNumber}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0f172a;margin:0;padding:24px;font-size:11px;background:#fff;}
+    .sheet{max-width:820px;margin:0 auto;border:1px solid #cbd5e1;padding:28px 32px;border-radius:8px;}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0284c7;padding-bottom:12px;margin-bottom:20px;}
+    .doc-title{font-size:24px;font-weight:900;color:#0284c7;text-transform:uppercase;letter-spacing:.5px;}
+    .doc-sub{font-size:10px;color:#64748b;margin-top:2px;font-weight:600;}
+    .brand{text-align:right;}
+    .brand-title{font-size:16px;font-weight:900;color:#0f172a;}
+    .brand-sub{font-size:10px;color:#64748b;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;}
+    .box{background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:6px;}
+    .box h4{margin:0 0 6px 0;font-size:11px;font-weight:800;color:#0284c7;text-transform:uppercase;}
+    .line{font-size:10.5px;color:#334155;line-height:1.6;}
+    table.data-table{width:100%;border-collapse:collapse;margin:16px 0;}
+    table.data-table th{background:#f1f5f9;color:#0f172a;font-size:10px;font-weight:800;text-transform:uppercase;padding:8px 10px;border:1px solid #cbd5e1;text-align:left;}
+    table.data-table td{padding:8px 10px;border:1px solid #e2e8f0;font-size:10.5px;}
+    .r{text-align:right;}
+    .totals-box{margin-left:auto;width:320px;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;margin-top:12px;}
+    .totals-row{display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #f1f5f9;}
+    .totals-row.grand{background:#0284c7;color:#fff;font-weight:900;font-size:13px;border-bottom:none;}
+    .footer-note{margin-top:24px;border-top:1px dashed #cbd5e1;padding-top:12px;font-size:9.5px;color:#64748b;text-align:center;}
+    .signature-row{display:flex;justify-content:space-between;margin-top:36px;}
+    .sig-line{width:200px;border-top:1px solid #64748b;text-align:center;padding-top:4px;font-size:10px;font-weight:700;}
+    @media print{body{padding:0}.sheet{border:none;border-radius:0}@page{margin:12mm}}
+  </style></head><body><div class="sheet">
+    <div class="top">
+      <div>
+        <div class="doc-title">${title}</div>
+        <div class="doc-sub">${docNumber ? 'Document Reference: ' + docNumber : ''} | Date: ${docDate}</div>
+      </div>
+      <div class="brand">
+        <div class="brand-title">${s.company || 'Payvibes Enterprise ERP'}</div>
+        <div class="brand-sub">${s.tagline || ''}</div>
+        <div class="brand-sub">NTN/STRN: ${s.ntn || 'NTN-7890123-4'} | Ph: ${s.phone || ''}</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="box">
+        <h4>Entity / Business Details</h4>
+        <div class="line">
+          <strong>${s.company}</strong><br/>
+          ${s.address ? s.address + '<br/>' : ''}
+          ${s.email ? 'Email: ' + s.email + '<br/>' : ''}
+          ${s.bank ? 'Bank Details: ' + s.bank : ''}
+        </div>
+      </div>
+      <div class="box">
+        <h4>Document Metadata</h4>
+        <div class="line">
+          ${Object.entries(dataObj).filter(([k]) => !/items|products/i.test(k)).map(([k, v]) => `<div><strong>${k}:</strong> ${v}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      ${s.footer || 'Thank you for your business. Computer generated document requiring no physical signature.'}
+      <br/>System Generated by Payvibes Cloud ERP | Hotline: ${s.phone}
+    </div>
+  </div>
+  <script>window.onload=function(){window.print();${autoClose ? 'window.close();' : ''}}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+};
+
+export const printDetailedInvoice = (invoice: SalesInvoice, settings: SystemSettings) => {
+  const s = settings;
+  const itemsHtml = (invoice.items || []).map((it, idx) => `
+    <tr>
+      <td style="text-align:center;">${idx + 1}</td>
+      <td><strong>${it.prodName}</strong> ${it.batch ? `<br/><span style="color:#64748b;font-size:9px;">Batch: ${it.batch}</span>` : ''}</td>
+      <td style="text-align:center;">${it.hsCode || '3004.90'}</td>
+      <td style="text-align:right;">${it.qty} ${it.unit}</td>
+      <td style="text-align:right;">${s.currency} ${(it.rate || 0).toFixed(2)}</td>
+      <td style="text-align:right;">${it.taxPct || 0}%</td>
+      <td style="text-align:right;">${s.currency} ${(it.discount || 0).toFixed(2)}</td>
+      <td style="text-align:right;"><strong>${s.currency} ${(it.amount || it.qty * it.rate).toFixed(2)}</strong></td>
+    </tr>
+  `).join('');
+
+  const words = numberToWords(invoice.amount);
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tax Invoice ${invoice.inv}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0f172a;margin:0;padding:24px;font-size:11px;background:#fff;}
+    .sheet{max-width:860px;margin:0 auto;border:1px solid #cbd5e1;padding:28px 32px;border-radius:8px;}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #ea580c;padding-bottom:12px;margin-bottom:16px;}
+    .title{font-size:24px;font-weight:900;color:#ea580c;letter-spacing:0.5px;}
+    .company{text-align:right;}
+    .company-name{font-size:16px;font-weight:900;color:#0f172a;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;}
+    .box{background:#f8fafc;border:1px solid #e2e8f0;padding:12px 14px;border-radius:6px;font-size:10.5px;line-height:1.6;}
+    .box-title{font-weight:800;color:#ea580c;text-transform:uppercase;margin-bottom:4px;font-size:10.5px;}
+    table{width:100%;border-collapse:collapse;margin:16px 0;}
+    th{background:#f1f5f9;color:#0f172a;font-size:10px;font-weight:800;text-transform:uppercase;padding:8px;border:1px solid #cbd5e1;}
+    td{padding:7px 8px;border:1px solid #e2e8f0;font-size:10.5px;}
+    .totals-area{display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;}
+    .words-box{flex:1;padding-right:24px;font-size:10.5px;}
+    .totals-table{width:320px;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;}
+    .totals-table td{padding:5px 10px;}
+    .grand-row{background:#ea580c;color:#fff;font-weight:900;font-size:13px;}
+    .grand-row td{color:#fff;border-color:#ea580c;}
+    .compliance-badges{display:flex;gap:12px;margin-top:14px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;}
+    .badge-item{font-size:9.5px;color:#334155;}
+    .footer{margin-top:20px;border-top:1px solid #e2e8f0;padding-top:10px;text-align:center;font-size:9.5px;color:#64748b;}
+    @media print{body{padding:0}.sheet{border:none}@page{margin:12mm}}
+  </style></head><body><div class="sheet">
+    <div class="header">
+      <div>
+        <div class="title">GST TAX INVOICE</div>
+        <div style="font-size:11px;font-weight:700;color:#334155;">Invoice No: <span style="font-family:monospace;color:#ea580c;">${invoice.inv}</span></div>
+        <div style="font-size:10px;color:#64748b;">Date: ${invoice.date} | Due Date: ${invoice.dueDate || 'Immediate'}</div>
+      </div>
+      <div class="company">
+        <div class="company-name">${s.company}</div>
+        <div style="font-size:10px;color:#475569;">${s.address}</div>
+        <div style="font-size:10px;color:#475569;">NTN: <strong>${s.ntn}</strong> | STRN: <strong>${s.strn}</strong></div>
+        <div style="font-size:10px;color:#475569;">Helpline: ${s.phone}</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="box">
+        <div class="box-title">Bill To / Buyer Details</div>
+        <div><strong>${invoice.custName}</strong></div>
+        <div>Address: ${invoice.custAddress || 'Over counter'}</div>
+        <div>NTN / CNIC / GSTIN: <strong>${invoice.custNtnCnic || 'Unregistered'}</strong></div>
+        <div>Province / Place of Supply: ${invoice.custProvince || 'Punjab'}</div>
+        <div>Phone: ${invoice.custPhone || 'N/A'}</div>
+      </div>
+      <div class="box">
+        <div class="box-title">Payment & E-Compliance Details</div>
+        <div>Payment Mode: <strong>${invoice.paymentMode}</strong> | Status: <strong>${invoice.status}</strong></div>
+        <div>IRN: <span style="font-family:monospace;font-size:9px;">${invoice.irn || 'Auto-Generated (Standard B2B)'}</span></div>
+        <div>E-Way Bill No: <strong>${invoice.eWayBillNo || 'Not Applicable / Local Delivery'}</strong></div>
+        ${invoice.vehicleNo ? `<div>Vehicle No: <strong>${invoice.vehicleNo}</strong></div>` : ''}
+        <div>Branch: <strong>${invoice.branchName || 'Central HQ'}</strong></div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30px;">#</th>
+          <th>Item / Medicine Description</th>
+          <th style="width:75px;">HS Code</th>
+          <th style="width:80px;text-align:right;">Qty</th>
+          <th style="width:85px;text-align:right;">Rate</th>
+          <th style="width:55px;text-align:right;">GST %</th>
+          <th style="width:65px;text-align:right;">Disc</th>
+          <th style="width:105px;text-align:right;">Total (${s.currency})</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <div class="totals-area">
+      <div class="words-box">
+        <div style="font-weight:700;color:#334155;margin-bottom:4px;">Amount in Words:</div>
+        <div style="font-style:italic;color:#ea580c;font-weight:700;">${s.currency} ${words} Only.</div>
+        <div style="margin-top:16px;font-size:10px;color:#475569;">
+          <strong>Bank Account for Settlement:</strong><br/>
+          ${s.bank || 'Meezan Bank Ltd | Payvibes Corporate Account'}
+        </div>
+        ${invoice.loyaltyPointsEarned ? `<div style="margin-top:8px;font-size:10px;color:#059669;font-weight:700;">⭐ Customer earned ${invoice.loyaltyPointsEarned} loyalty reward points & ${s.currency} ${(invoice.cashbackEarned || 0).toFixed(2)} digital cashback on this invoice!</div>` : ''}
+      </div>
+
+      <table class="totals-table">
+        <tr><td>Taxable Subtotal:</td><td style="text-align:right;">${s.currency} ${(invoice.subtotal || 0).toFixed(2)}</td></tr>
+        <tr><td>GST / Tax (${invoice.taxPct}%):</td><td style="text-align:right;">+ ${s.currency} ${(invoice.taxAmount || 0).toFixed(2)}</td></tr>
+        ${invoice.discount ? `<tr><td>Discount Allowed:</td><td style="text-align:right;color:#e11d48;">- ${s.currency} ${(invoice.discount || 0).toFixed(2)}</td></tr>` : ''}
+        ${invoice.tdsAmount ? `<tr><td>TDS Deducted (${invoice.tdsRate}%):</td><td style="text-align:right;color:#0284c7;">- ${s.currency} ${(invoice.tdsAmount || 0).toFixed(2)}</td></tr>` : ''}
+        ${invoice.tcsAmount ? `<tr><td>TCS Collected (${invoice.tcsRate}%):</td><td style="text-align:right;">+ ${s.currency} ${(invoice.tcsAmount || 0).toFixed(2)}</td></tr>` : ''}
+        ${invoice.loyaltyDiscount ? `<tr><td>Loyalty Points Redeemed:</td><td style="text-align:right;color:#059669;">- ${s.currency} ${(invoice.loyaltyDiscount || 0).toFixed(2)}</td></tr>` : ''}
+        ${invoice.walletUsed ? `<tr><td>Digital Wallet Used:</td><td style="text-align:right;color:#059669;">- ${s.currency} ${(invoice.walletUsed || 0).toFixed(2)}</td></tr>` : ''}
+        <tr class="grand-row"><td>Grand Total:</td><td style="text-align:right;">${s.currency} ${(invoice.amount || 0).toFixed(2)}</td></tr>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div>${s.footer || 'Goods once sold will not be taken back without original computer generated invoice.'}</div>
+      <div style="margin-top:4px;font-weight:700;">Payvibes Multi-Store Invoicing & ERP System | Software Support: +92 308 6707676</div>
+    </div>
+  </div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+};
+
+export const printSalarySlip = (payroll: PayrollRun, emp: Employee | undefined, settings: SystemSettings) => {
+  const s = settings;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Salary Slip - ${payroll.employeeName}</title>
+  <style>
+    body{font-family:sans-serif;padding:24px;font-size:11px;color:#0f172a;}
+    .card{max-width:650px;margin:0 auto;border:1px solid #cbd5e1;padding:24px;border-radius:8px;}
+    .title{font-size:18px;font-weight:900;color:#0284c7;text-align:center;margin-bottom:4px;}
+    .sub{text-align:center;color:#64748b;margin-bottom:16px;}
+    table{width:100%;border-collapse:collapse;margin:12px 0;}
+    th,td{border:1px solid #e2e8f0;padding:6px 10px;}
+    th{background:#f8fafc;font-weight:700;}
+    .r{text-align:right;}
+    .net{background:#0284c7;color:#fff;font-size:13px;font-weight:900;}
+  </style></head><body><div class="card">
+    <div class="title">${s.company}</div>
+    <div class="sub">CONFIDENTIAL STAFF PAYSLIP - ${payroll.month} ${payroll.year}</div>
+    <table>
+      <tr><td><strong>Employee Name:</strong></td><td>${payroll.employeeName}</td><td><strong>Employee Code:</strong></td><td>${emp?.employeeCode || 'EMP-100'}</td></tr>
+      <tr><td><strong>Designation:</strong></td><td>${emp?.designation || 'Staff'}</td><td><strong>Department:</strong></td><td>${emp?.department || 'Operations'}</td></tr>
+      <tr><td><strong>Days Present:</strong></td><td>${payroll.totalDaysPresent} Days</td><td><strong>Hours Worked:</strong></td><td>${payroll.totalHoursWorked} hrs</td></tr>
+    </table>
+    <table>
+      <tr><th>Earnings Breakdown</th><th class="r">Amount (${s.currency})</th><th>Deductions Breakdown</th><th class="r">Amount (${s.currency})</th></tr>
+      <tr><td>Base Salary</td><td class="r">${payroll.baseSalary.toFixed(2)}</td><td>Tax / Provident Fund</td><td class="r">${payroll.deductions.toFixed(2)}</td></tr>
+      <tr><td>Overtime Pay</td><td class="r">${payroll.overtimePay.toFixed(2)}</td><td>Unpaid Leave Penalty</td><td class="r">0.00</td></tr>
+      <tr><td>Special Allowances</td><td class="r">${payroll.allowances.toFixed(2)}</td><td>Other Deductions</td><td class="r">0.00</td></tr>
+      <tr class="net"><td colspan="3">Net Disbursed Salary</td><td class="r">${payroll.netSalary.toFixed(2)}</td></tr>
+    </table>
+    <div style="margin-top:20px;display:flex;justify-content:space-between;padding-top:20px;">
+      <div>Employee Signature: _______________</div>
+      <div>Authorized Manager: _______________</div>
+    </div>
+  </div><script>window.onload=function(){window.print();}<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  }
+};
+
+export const printSalesInvoice = printDetailedInvoice;
+

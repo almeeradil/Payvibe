@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#84cc16" />
+      <stop offset="100%" stop-color="#4d7c0f" />
+    </linearGradient>
+  </defs>
+  <!-- Red Brand Background -->
+  <rect width="500" height="500" rx="40" fill="#dc2626"/>
+  
+  <!-- Central Swirl Emblem -->
+  <g transform="translate(100, 70)">
+    <!-- Yellow Top Swirl -->
+    <path d="M 150 20 C 230 20, 270 90, 230 170 C 200 130, 160 80, 150 20 Z" fill="url(#yellowGrad)" />
+    <!-- Green Left Swirl -->
+    <path d="M 50 150 C 40 70, 110 30, 160 40 C 130 90, 80 120, 50 150 Z" fill="#65a30d" />
+    <!-- Lime Bottom-Left Curve -->
+    <path d="M 40 160 C 20 220, 80 270, 150 270 C 120 240, 70 210, 40 160 Z" fill="#84cc16" />
+    <!-- White Bottom-Right Swirl -->
+    <path d="M 150 270 C 230 270, 270 200, 220 130 C 210 190, 180 240, 150 270 Z" fill="#ffffff" />
+    <!-- Inner White Core -->
+    <circle cx="150" cy="150" r="60" fill="#ffffff" opacity="0.9" />
+    
+    <!-- Central Black 'P' Icon -->
+    <rect x="110" y="105" width="80" height="90" rx="16" fill="#111827" />
+    <path d="M 130 120 L 155 120 C 168 120, 175 128, 175 140 C 175 152, 168 160, 155 160 L 145 160 L 145 180 L 130 180 Z M 145 133 L 145 147 L 154 147 C 158 147, 160 144, 160 140 C 160 136, 158 133, 154 133 Z" fill="#ffffff" />
+  </g>
+
+  <!-- PAYVIBES Typography -->
+  <text x="250" y="415" text-anchor="middle" font-family="'Montserrat', 'Arial Black', sans-serif" font-weight="900" font-size="46" letter-spacing="4" fill="#0f172a">PAYVIBES</text>
+</svg>
