@@ -745,13 +745,23 @@ function editPatient(idx) {
 
 // Save Handlers for All Entities with Full Create/Edit Dual-Support
 function saveOrder() {
+  const invNumInput = document.getElementById('invNum')?.value.trim();
+  const invDateInput = document.getElementById('invDate')?.value.trim();
   const custName = document.getElementById('invCustName')?.value.trim();
   const prodName = document.getElementById('invProdName')?.value.trim();
-  const qty = parseFloat(document.getElementById('invQty')?.value || 1);
-  const rate = parseFloat(document.getElementById('invRate')?.value || 0);
+  const qtyInput = document.getElementById('invQty')?.value.trim();
+  const rateInput = document.getElementById('invRate')?.value.trim();
 
-  if (!custName || !prodName || rate <= 0) {
-    alert("Please enter customer name, product name, and a valid rate.");
+  if (!invNumInput || !invDateInput || !custName || !prodName || !qtyInput || !rateInput) {
+    alert("Please fill in all required fields (Invoice Number, Date, Customer Name, Product Name, Quantity, and Rate).");
+    return;
+  }
+
+  const qty = parseFloat(qtyInput);
+  const rate = parseFloat(rateInput);
+
+  if (isNaN(qty) || qty <= 0 || isNaN(rate) || rate <= 0) {
+    alert("Please enter valid positive numbers for Quantity and Rate.");
     return;
   }
 
@@ -763,13 +773,13 @@ function saveOrder() {
   const tcs = applyTcs ? (base + tax) * 0.001 : 0;
   const total = base + tax + tcs;
 
-  const invNum = document.getElementById('invNum')?.value || ('INV-' + Math.floor(1000 + Math.random() * 9000));
+  const invNum = invNumInput;
   const irn = 'IRN-' + Math.floor(10000000000000 + Math.random() * 90000000000000);
   const eway = total > 50000 ? 'EWB-' + Math.floor(10000000000 + Math.random() * 90000000000) : undefined;
 
   const orderData = {
     inv: invNum,
-    date: document.getElementById('invDate')?.value || new Date().toISOString().split('T')[0],
+    date: invDateInput,
     custName: custName,
     custNtnCnic: document.getElementById('invCustNtnCnic')?.value || '',
     custPhone: document.getElementById('invCustPhone')?.value || '',
@@ -906,17 +916,30 @@ function saveSupplier() {
 }
 
 function savePurchaseInvoice() {
+  const pinvNumInput = document.getElementById('pinvNum')?.value.trim();
+  const pinvDateInput = document.getElementById('pinvDate')?.value.trim();
   const sup = document.getElementById('pinvSupplier')?.value.trim();
   const item = document.getElementById('pinvItem')?.value.trim();
-  const qty = parseFloat(document.getElementById('pinvQty')?.value || 1);
-  const rate = parseFloat(document.getElementById('pinvRate')?.value || 0);
+  const qtyInput = document.getElementById('pinvQty')?.value.trim();
+  const rateInput = document.getElementById('pinvRate')?.value.trim();
 
-  if (!sup || !item || rate <= 0) return alert("Please fill all required purchase fields.");
+  if (!pinvNumInput || !pinvDateInput || !sup || !item || !qtyInput || !rateInput) {
+    alert("Please fill in all required fields (Invoice Number, Date, Supplier, Item, Quantity, and Rate).");
+    return;
+  }
+
+  const qty = parseFloat(qtyInput);
+  const rate = parseFloat(rateInput);
+
+  if (isNaN(qty) || qty <= 0 || isNaN(rate) || rate <= 0) {
+    alert("Please enter valid positive numbers for Quantity and Rate.");
+    return;
+  }
 
   const amt = qty * rate;
   const pinvData = {
-    ref: document.getElementById('pinvNum')?.value || ('PINV-' + Math.floor(5000 + Math.random() * 5000)),
-    date: document.getElementById('pinvDate')?.value || new Date().toISOString().split('T')[0],
+    ref: pinvNumInput,
+    date: pinvDateInput,
     supplier: sup,
     item: item,
     qty: qty,
@@ -3084,6 +3107,240 @@ window.deleteSupplier = deleteSupplier;
 window.deletePatient = deletePatient;
 window.deleteExpense = deleteExpense;
 window.deleteCashBank = deleteCashBank;
+// --- AI Integration Handlers ---
+async function handleOcrUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const btn = event.target.nextElementSibling;
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Scanning...';
+  btn.disabled = true;
+
+  try {
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result.split(',')[1];
+      
+      const response = await fetch('/api/gemini/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type }),
+      });
+      
+      if (!response.ok) throw new Error('OCR API failed');
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      const result = data.result;
+      
+      openModal('orderModal');
+      
+      if (result.partyName) {
+        document.getElementById('invCustName').value = result.partyName;
+      }
+      if (result.date) {
+        document.getElementById('invDate').value = result.date;
+      }
+      if (result.items && result.items.length > 0) {
+        const item = result.items[0];
+        document.getElementById('invProdName').value = item.name || 'Extracted Item';
+        document.getElementById('invQty').value = item.qty || 1;
+        document.getElementById('invRate').value = item.rate || 0;
+      } else if (result.total) {
+        document.getElementById('invProdName').value = 'Extracted General Item';
+        document.getElementById('invQty').value = 1;
+        document.getElementById('invRate').value = result.total;
+      }
+      
+      calculateInvoiceTotal();
+    };
+    reader.readAsDataURL(file);
+  } catch (err) {
+    alert("Error processing OCR: " + err.message);
+  } finally {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+    event.target.value = '';
+  }
+}
+
+function handleVoiceCommand() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Your browser doesn't support voice recognition.");
+    return;
+  }
+
+  const btn = document.getElementById('voiceInvoiceBtn');
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-microphone fa-beat mr-1 text-red-500"></i>Listening...';
+  btn.classList.add('bg-red-100');
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Processing...';
+    btn.classList.remove('bg-red-100');
+    
+    try {
+      const response = await fetch('/api/gemini/voice-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: transcript }),
+      });
+      
+      if (!response.ok) throw new Error('Voice API failed');
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      const result = data.result;
+      
+      openModal('orderModal');
+      
+      if (result.customerName) document.getElementById('invCustName').value = result.customerName;
+      document.getElementById('invProdName').value = result.productName || 'Voice Item';
+      document.getElementById('invQty').value = result.qty || 1;
+      document.getElementById('invRate').value = result.rate || 0;
+      
+      calculateInvoiceTotal();
+    } catch (err) {
+      alert("Error processing voice command: " + err.message);
+    } finally {
+      btn.innerHTML = oldText;
+    }
+  };
+
+  recognition.onerror = (event) => {
+    alert(`Voice recognition error: ${event.error}`);
+    btn.innerHTML = oldText;
+    btn.classList.remove('bg-red-100');
+  };
+
+  recognition.start();
+}
+
+async function handleOcrUploadPinv(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const btn = event.target.nextElementSibling;
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Scanning...';
+  btn.disabled = true;
+
+  try {
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result.split(',')[1];
+      
+      const response = await fetch('/api/gemini/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type }),
+      });
+      
+      if (!response.ok) throw new Error('OCR API failed');
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      const result = data.result;
+      
+      openModal('purchaseInvoiceModal');
+      
+      if (result.partyName) {
+        document.getElementById('pinvSupplier').value = result.partyName;
+      }
+      if (result.date) {
+        document.getElementById('pinvDate').value = result.date;
+      }
+      if (result.items && result.items.length > 0) {
+        const item = result.items[0];
+        document.getElementById('pinvItem').value = item.name || 'Extracted Item';
+        document.getElementById('pinvQty').value = item.qty || 1;
+        document.getElementById('pinvRate').value = item.rate || 0;
+      } else if (result.total) {
+        document.getElementById('pinvItem').value = 'Extracted General Item';
+        document.getElementById('pinvQty').value = 1;
+        document.getElementById('pinvRate').value = result.total;
+      }
+    };
+    reader.readAsDataURL(file);
+  } catch (err) {
+    alert("Error processing OCR: " + err.message);
+  } finally {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+    event.target.value = '';
+  }
+}
+
+function handleVoiceCommandPinv() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Your browser doesn't support voice recognition.");
+    return;
+  }
+
+  const btn = document.getElementById('voicePinvBtn');
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-microphone fa-beat mr-1 text-red-500"></i>Listening...';
+  btn.classList.add('bg-red-100');
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Processing...';
+    btn.classList.remove('bg-red-100');
+    
+    try {
+      const response = await fetch('/api/gemini/voice-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: transcript }),
+      });
+      
+      if (!response.ok) throw new Error('Voice API failed');
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      
+      const result = data.result;
+      
+      openModal('purchaseInvoiceModal');
+      
+      if (result.customerName) document.getElementById('pinvSupplier').value = result.customerName;
+      document.getElementById('pinvItem').value = result.productName || 'Voice Item';
+      document.getElementById('pinvQty').value = result.qty || 1;
+      document.getElementById('pinvRate').value = result.rate || 0;
+      
+    } catch (err) {
+      alert("Error processing voice command: " + err.message);
+    } finally {
+      btn.innerHTML = oldText;
+    }
+  };
+
+  recognition.onerror = (event) => {
+    alert(`Voice recognition error: ${event.error}`);
+    btn.innerHTML = oldText;
+    btn.classList.remove('bg-red-100');
+  };
+
+  recognition.start();
+}
+
+window.handleOcrUpload = handleOcrUpload;
+window.handleVoiceCommand = handleVoiceCommand;
+window.handleOcrUploadPinv = handleOcrUploadPinv;
+window.handleVoiceCommandPinv = handleVoiceCommandPinv;
 window.deleteOtherIncome = deleteOtherIncome;
 window.renderAll = renderAll;
 window.initApp = initApp;
