@@ -932,7 +932,7 @@ export const getInitialData = (): AppStateData => ({
       recipientName: 'Shifa Pharmacy & Wellness',
       recipientPhone: '0321-9876543',
       templateType: 'Payment Reminder',
-      message: 'Dear Customer (Shifa Pharmacy & Wellness), friendly reminder that Invoice INV-1002 of Rs 8,012.00 is due on 25-Aug-2026. Please settle via bank transfer or click to pay. Thank you! - Payvibes ERP',
+      message: 'Dear Customer (Shifa Pharmacy & Wellness), friendly reminder that Invoice INV-1002 of Rs 8,012.00 is due on 25-Aug-2026. Please settle via bank transfer or click to pay. Thank you! - Payvibes',
       status: 'Delivered',
       invoiceRef: 'INV-1002',
     },
