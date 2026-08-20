@@ -98,8 +98,8 @@ export default function App() {
           body: JSON.stringify({ prompt: transcript }),
         });
         
-        if (!response.ok) throw new Error('Failed to process voice command');
         const resData = await response.json();
+        if (!response.ok) throw new Error(resData.error || 'Failed to process voice command');
         if (resData.error) throw new Error(resData.error);
         
         const result = resData.result;
