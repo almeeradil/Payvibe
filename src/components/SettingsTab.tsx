@@ -8,7 +8,9 @@ import {
   Shield, 
   Globe, 
   Percent, 
-  Smartphone 
+  Smartphone,
+  Boxes,
+  AlertTriangle
 } from 'lucide-react';
 import { SystemSettings } from '../types';
 import { exportBackupJson } from '../services/storage';
@@ -182,6 +184,64 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 onChange={(e) => setFormData({ ...formData, eWayBillThreshold: parseFloat(e.target.value) || 50000 })}
                 className="w-full px-3 py-2 border rounded-lg font-bold"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Inventory & Stock Reorder Configuration */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+              <Boxes className="w-4 h-4 text-orange-600" />
+              <span>Inventory &amp; Stock Reorder Configuration</span>
+            </h4>
+            <span className="text-[10px] bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded-full">
+              Automated Stock Watch
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Define safety stock thresholds and reorder triggers. Items falling below these limits will be highlighted on the main dashboard and display an active notification badge on the sidebar inventory menu.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                Global Reorder Point Threshold (Units) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.inventoryReorderPoint ?? 20}
+                onChange={(e) => setFormData({ ...formData, inventoryReorderPoint: parseInt(e.target.value) || 20 })}
+                className="w-full px-3 py-2 border rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Standard safety reorder target across inventory SKUs (unless overridden per item).
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                Critical Emergency Stock Level (Units)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.criticalStockThreshold ?? 5}
+                onChange={(e) => setFormData({ ...formData, criticalStockThreshold: parseInt(e.target.value) || 5 })}
+                className="w-full px-3 py-2 border rounded-lg font-bold text-rose-600 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Quantity at or below which items receive highest-urgency Critical / Out of Stock alerts.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Live Integration Active:</span> Whenever an item's in-stock quantity is equal to or less than its defined reorder point, the visual Dashboard will showcase it in the Low Stock Indicator section, and the sidebar will show a pulsing red count badge.
             </div>
           </div>
         </div>
