@@ -65,13 +65,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="p-4 border-b border-slate-800 flex items-center space-x-3 bg-slate-950/40">
         <img
-          src="https://raw.githubusercontent.com/zuraizadil32-cyber/Payvibes/main/logo.png"
+          src="https://raw.githubusercontent.com/zuraizadil32-cyber/Payvubes/main/logo.png"
           alt="Payvibes logo"
-          className="w-10 h-10 rounded-lg object-cover shadow-sm ring-1 ring-white/10"
+          className="w-10 h-10 rounded-lg object-contain shadow-sm ring-1 ring-white/10"
         />
         <div className="overflow-hidden">
           <h2 className="font-extrabold text-white text-sm tracking-wide flex items-center gap-1.5">
-            Payvibes <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.2 rounded font-mono font-bold">ERP</span>
+            Payvibes
           </h2>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -385,17 +385,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Barcode className={`w-4 h-4 ${isActive('barcode') ? 'text-white' : 'text-cyan-400'}`} />
           <span>Barcode Scanner</span>
-        </button>
-
-        {/* Audit Trail */}
-        <button
-          onClick={() => onTabChange('audittrail')}
-          className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition group ${
-            isActive('audittrail') ? 'bg-slate-700 text-white font-bold' : 'hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <History className={`w-4 h-4 ${isActive('audittrail') ? 'text-white' : 'text-cyan-400'}`} />
-          <span>Audit Trail &amp; Logs</span>
         </button>
 
         {/* Comprehensive Reports */}
