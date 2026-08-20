@@ -48,7 +48,6 @@ import { InventoryTab } from './components/InventoryTab';
 import { PartiesTab } from './components/PartiesTab';
 import { CashBankTab } from './components/CashBankTab';
 import { ReportsTab } from './components/ReportsTab';
-import { AuditTab } from './components/AuditTab';
 import { SettingsTab } from './components/SettingsTab';
 
 import { ClientPortalModal } from './components/ClientPortalModal';
@@ -57,7 +56,7 @@ import { StockTransferModal } from './components/StockTransferModal';
 
 export default function App() {
   const [data, setData] = useState<AppStateData>(() => getStoredData());
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   
   // Modals
@@ -521,6 +520,16 @@ export default function App() {
     );
   }
 
+  // Calculate inventory items with stock at or below configured reorder point
+  const defaultReorderPoint = data.settings.inventoryReorderPoint ?? 20;
+  const lowStockCount = data.inventory.filter(i => {
+    const threshold = i.minStockAlert ?? i.minStockLevel ?? defaultReorderPoint;
+    return (i.stock || 0) <= threshold;
+  }).length;
+
+  const unreconciledCount = data.bankStatements.filter(s => !s.reconciled).length;
+  const pendingRemindersCount = data.orders.filter(o => o.status === 'Unpaid' || o.status === 'Overdue').length;
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900">
       {/* Top Main Navigation Header */}
@@ -546,8 +555,13 @@ export default function App() {
         {/* Navigation Sidebar */}
         <Sidebar
           activeTab={activeTab}
+          currentTab={activeTab}
           userRole={data.currentUserRole}
           onTabChange={setActiveTab}
+          onLogout={handleLogout}
+          lowStockCount={lowStockCount}
+          unreconciledCount={unreconciledCount}
+          pendingRemindersCount={pendingRemindersCount}
         />
 
         {/* Dynamic Tab Body */}
@@ -725,16 +739,6 @@ export default function App() {
               customers={data.customers}
               settings={data.settings}
               userRole={data.currentUserRole}
-            />
-          )}
-
-          {activeTab === 'security_audit' && (
-            <AuditTab
-              auditLogs={data.auditLogs}
-              userRole={data.currentUserRole}
-              settings={data.settings}
-              onRestoreBackupFile={handleRestoreBackupFile}
-              onOpenClientPortal={() => setShowClientPortal(true)}
             />
           )}
 
