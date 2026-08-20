@@ -26,6 +26,8 @@ interface HeaderProps {
   onQuickRefresh: () => void;
   searchTerm: string;
   onSearchChange: (q: string) => void;
+  onVoiceInvoice: () => void;
+  isVoiceListening?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -41,6 +43,8 @@ export const Header: React.FC<HeaderProps> = ({
   onQuickRefresh,
   searchTerm,
   onSearchChange,
+  onVoiceInvoice,
+  isVoiceListening = false,
 }) => {
   const currentBranch = branches.find(b => b.id === currentBranchId);
 
@@ -127,6 +131,18 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Barcode className="w-3.5 h-3.5 text-slate-600" />
           <span>Scanner</span>
+        </button>
+
+        {/* Voice Invoice Button */}
+        <button
+          id="voiceInvoiceBtn"
+          onClick={onVoiceInvoice}
+          disabled={isVoiceListening}
+          className={`px-3 py-1.5 ${isVoiceListening ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-purple-50 hover:bg-purple-100 text-purple-700'} rounded-lg font-bold text-xs border border-purple-200 transition flex items-center space-x-1`}
+          title="Create invoice using voice command"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>{isVoiceListening ? 'Listening...' : 'Voice Invoice'}</span>
         </button>
 
         {/* New Invoice Button */}
