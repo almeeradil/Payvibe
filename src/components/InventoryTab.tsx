@@ -42,8 +42,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
   const [hsnCode, setHsnCode] = useState('3004.90.99');
   const [minStock, setMinStock] = useState('20');
 
+  const defaultReorderPoint = settings.inventoryReorderPoint || 20;
   const totalValuation = inventory.reduce((s, i) => s + (i.stock * (i.costPrice || i.price * 0.8)), 0);
-  const lowStockCount = inventory.filter(i => i.stock <= (i.minStockAlert || 20)).length;
+  const lowStockCount = inventory.filter(i => i.stock <= (i.minStockAlert ?? i.minStockLevel ?? defaultReorderPoint)).length;
 
   const handleSaveItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,7 +165,9 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredInventory.map(item => {
-              const isLow = item.stock <= (item.minStockAlert || 20);
+              const reorderThreshold = item.minStockAlert ?? item.minStockLevel ?? defaultReorderPoint;
+              const isLow = item.stock <= reorderThreshold;
+              const isCritical = item.stock <= (settings.criticalStockThreshold || 5);
               return (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td className="p-3 font-bold text-slate-900">{item.name}</td>
@@ -177,14 +180,25 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                   <td className="p-3 text-right font-black text-slate-900">
                     {settings.currency} {item.price.toFixed(2)}
                   </td>
-                  <td className={`p-3 text-right font-black ${isLow ? 'text-rose-600' : 'text-emerald-700'}`}>
-                    {item.stock}
+                  <td className="p-3 text-right">
+                    <span className={`font-black ${isLow ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      {item.stock}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Min: {reorderThreshold}
+                    </span>
                   </td>
                   <td className="p-3 text-center">
                     <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                      isLow ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                      item.stock === 0
+                        ? 'bg-rose-900 text-white'
+                        : isCritical
+                        ? 'bg-rose-100 text-rose-800 ring-1 ring-rose-300'
+                        : isLow
+                        ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-300'
+                        : 'bg-emerald-100 text-emerald-800'
                     }`}>
-                      {isLow ? 'Low Stock' : 'Optimal'}
+                      {item.stock === 0 ? 'Out of Stock' : isCritical ? 'Critical Stock' : isLow ? 'Below Reorder' : 'Optimal'}
                     </span>
                   </td>
                 </tr>
@@ -316,3 +330,4 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
     </div>
   );
 };
+
