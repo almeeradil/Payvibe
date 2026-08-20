@@ -16,10 +16,26 @@ function initStorage() {
   }
 }
 
-function persistData() {
-  if (window.userData) {
-    localStorage.setItem('payvibes_enterprise_data', JSON.stringify(window.userData));
+let persistTimeout = null;
+function persistData(immediate = false) {
+  if (!window.userData) return;
+  if (immediate) {
+    if (persistTimeout) clearTimeout(persistTimeout);
+    try {
+      localStorage.setItem('payvibes_enterprise_data', JSON.stringify(window.userData));
+    } catch (e) {
+      console.warn("Storage write error", e);
+    }
+    return;
   }
+  if (persistTimeout) clearTimeout(persistTimeout);
+  persistTimeout = setTimeout(() => {
+    try {
+      localStorage.setItem('payvibes_enterprise_data', JSON.stringify(window.userData));
+    } catch (e) {
+      console.warn("Storage write error", e);
+    }
+  }, 100);
 }
 
 // Security & Immutable Audit Trail
@@ -37,7 +53,6 @@ function logAuditEvent(action, module, details) {
   };
   window.userData.auditLogs.unshift(newLog);
   persistData();
-  renderAuditTrail();
   renderTracking();
 }
 
@@ -153,7 +168,6 @@ function showTab(tabName) {
       googleprofile: 'Google Business Profile Manager',
       marketingtools: 'WhatsApp & SMS Marketing Broadcasts',
       onlinestore: 'Digital Web Storefront',
-      audittrail: 'Security & Immutable Audit Trail',
       settings: 'Business & Statutory Settings',
       help: 'Customer Helpline & WhatsApp Support',
       reminders: 'Automated WhatsApp & SMS Payment Reminders',
@@ -191,10 +205,8 @@ function showTab(tabName) {
     }
   }
 
-  if (tabName === 'dashboard') {
-    renderCharts();
-  } else if (tabName === 'ewaybill') {
-    renderEwayBills();
+  if (typeof renderTabContent === 'function') {
+    renderTabContent(tabName);
   }
 }
 
@@ -2070,33 +2082,115 @@ function handleRestoreBackupFile(event) {
   reader.readAsText(file);
 }
 
+// Fast Targeted Render Dispatcher for Maximum Performance
+function renderTabContent(tabName) {
+  if (!window.userData) return;
+  switch (tabName) {
+    case 'dashboard':
+      renderStats();
+      renderTracking();
+      renderCharts();
+      break;
+    case 'orders':
+      renderOrders();
+      break;
+    case 'purchaseinvoices':
+      renderPurchaseInvoices();
+      break;
+    case 'ewaybill':
+      renderEwayBills();
+      break;
+    case 'gstfiling':
+      renderGstFilings();
+      break;
+    case 'tdstcs':
+      renderTdsTcs();
+      break;
+    case 'bankrecon':
+      renderBankRecon();
+      break;
+    case 'stocktransfers':
+      renderStockTransfers();
+      break;
+    case 'inventory':
+      renderInventory();
+      break;
+    case 'customers':
+      renderCustomers();
+      break;
+    case 'suppliers':
+      renderSuppliers();
+      break;
+    case 'quotations':
+      renderQuotations();
+      break;
+    case 'debitnotes':
+      renderDebitNotes();
+      break;
+    case 'patients':
+      renderPatients();
+      break;
+    case 'purchases':
+      renderPurchases();
+      break;
+    case 'payouts':
+      renderPayouts();
+      break;
+    case 'expenses':
+      renderExpenses();
+      break;
+    case 'cashbank':
+      renderCashBank();
+      break;
+    case 'otherincome':
+      renderOtherIncome();
+      break;
+    case 'attendance':
+      renderAttendance();
+      break;
+    case 'payroll':
+      renderPayroll();
+      break;
+    case 'reminders':
+      renderOverdueReminders();
+      break;
+    default:
+      break;
+  }
+}
+
+function renderRemainingTabs(exceptTab) {
+  if (!window.userData) return;
+  const allTabs = [
+    'orders', 'purchaseinvoices', 'ewaybill', 'gstfiling', 'tdstcs', 'bankrecon',
+    'stocktransfers', 'inventory', 'customers', 'suppliers', 'quotations', 'debitnotes',
+    'patients', 'purchases', 'payouts', 'expenses', 'cashbank', 'otherincome',
+    'attendance', 'payroll', 'reminders'
+  ];
+  allTabs.forEach(t => {
+    if (t !== exceptTab) {
+      renderTabContent(t);
+    }
+  });
+}
+
 // Render Functions
 function renderAll() {
   if (!window.userData) return;
   renderStats();
-  renderOrders();
-  renderPurchaseInvoices();
-  renderEwayBills();
-  renderGstFilings();
-  renderTdsTcs();
-  renderBankRecon();
-  renderStockTransfers();
-  renderAttendance();
-  renderPayroll();
-  renderAuditTrail();
-  renderOverdueReminders();
-  renderInventory();
-  renderCustomers();
-  renderSuppliers();
-  renderQuotations();
-  renderDebitNotes();
-  renderPatients();
-  renderPurchases();
-  renderPayouts();
-  renderExpenses();
-  renderCashBank();
-  renderOtherIncome();
   renderTracking();
+  
+  // Identify active tab and render immediately
+  const activeTabEl = document.querySelector('.tab-content:not(.hidden)');
+  const activeTabId = activeTabEl ? activeTabEl.id.replace('tab-', '') : 'dashboard';
+  renderTabContent(activeTabId);
+
+  // Render non-active tabs in background so navigation is instant
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(() => renderRemainingTabs(activeTabId));
+  } else {
+    setTimeout(() => renderRemainingTabs(activeTabId), 30);
+  }
 }
 
 function renderStats() {
@@ -2331,21 +2425,6 @@ function renderPayroll() {
       <td class="p-3"><span class="text-xs text-emerald-600 font-bold">● Auto-synced EXP</span></td>
       <td class="p-3"><span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-bold text-[10px]">${p.status}</span></td>
       <td class="p-3 text-right"><button onclick="alert('Printing salary slip for ${p.employeeName} (${p.month} ${p.year})');" class="text-cyan-600 hover:underline font-bold text-xs"><i class="fa-solid fa-print mr-1"></i> Slip</button></td>
-    </tr>
-  `).join('');
-}
-
-function renderAuditTrail() {
-  const tbody = document.getElementById('auditTrailTableBody');
-  if (!tbody || !window.userData) return;
-  const auditLogs = window.userData.auditLogs || [];
-  tbody.innerHTML = auditLogs.map(a => `
-    <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
-      <td class="p-3 font-mono text-[11px] text-slate-500">${a.timestamp}</td>
-      <td class="p-3 font-bold text-slate-800">${a.userName} <span class="text-[10px] text-orange-600">(${a.userRole})</span></td>
-      <td class="p-3 font-black text-cyan-700">${a.action}</td>
-      <td class="p-3 font-semibold text-slate-600">${a.module}</td>
-      <td class="p-3 text-slate-700">${a.details}</td>
     </tr>
   `).join('');
 }
@@ -2752,6 +2831,123 @@ function initApp() {
   setupAutocomplete('itemName', 'dropdown-itemName');
 }
 
+// Universal Printing & Offline Document Exporter Engine
+function printDocument(elementId = 'printInvoiceArea') {
+  const el = document.getElementById(elementId);
+  if (!el) {
+    window.print();
+    return;
+  }
+
+  // Remove any stale print iframes
+  const oldFrame = document.getElementById('appPrintIframe');
+  if (oldFrame) {
+    try {
+      oldFrame.remove();
+    } catch (e) {}
+  }
+
+  // Create isolated invisible print iframe with proper layout dimensions
+  const printFrame = document.createElement('iframe');
+  printFrame.id = 'appPrintIframe';
+  printFrame.style.position = 'fixed';
+  printFrame.style.left = '-9999px';
+  printFrame.style.top = '0';
+  printFrame.style.width = '1024px';
+  printFrame.style.height = '768px';
+  printFrame.style.border = '0';
+  printFrame.style.visibility = 'hidden';
+  document.body.appendChild(printFrame);
+
+  const clonedHtml = el.innerHTML;
+  const docHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>Payvibes Statutory Document Print</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+          @page { size: auto; margin: 8mm; }
+          * { box-sizing: border-box; }
+          body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #ffffff; 
+            color: #000000; 
+            margin: 0; 
+            padding: 16px; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+          }
+          .no-print { display: none !important; }
+          table { width: 100%; border-collapse: collapse; }
+        </style>
+      </head>
+      <body class="bg-white text-black p-4">
+        ${clonedHtml}
+      </body>
+    </html>
+  `;
+
+  try {
+    const frameDoc = printFrame.contentWindow.document;
+    frameDoc.open();
+    frameDoc.write(docHtml);
+    frameDoc.close();
+
+    const doPrint = () => {
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (err) {
+          window.print();
+        }
+      }, 350);
+    };
+
+    if (printFrame.contentWindow) {
+      printFrame.contentWindow.onload = doPrint;
+    }
+    setTimeout(doPrint, 500);
+  } catch (err) {
+    window.print();
+  }
+}
+
+function downloadDocumentCopy(elementId, filename = 'document_copy.html') {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const content = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${filename.replace('.html', '')}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+          @page { size: auto; margin: 8mm; }
+          body { font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #000; margin: 0; padding: 20px; }
+        </style>
+      </head>
+      <body class="bg-white text-black">
+        ${el.innerHTML}
+      </body>
+    </html>
+  `;
+  const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // Attach All Functions to Window for Global Onclick Compatibility
 window.handleLogin = handleLogin;
 window.quickFillRole = quickFillRole;
@@ -2760,6 +2956,8 @@ window.showTab = showTab;
 window.toggleSideMenu = toggleSideMenu;
 window.openModal = openModal;
 window.closeModal = closeModal;
+window.printDocument = printDocument;
+window.downloadDocumentCopy = downloadDocumentCopy;
 window.handleBranchChange = handleBranchChange;
 window.handleSelectExistingCustomer = handleSelectExistingCustomer;
 window.handleSelectCustomerTemplate = handleSelectCustomerTemplate;
