@@ -11,31 +11,42 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @media print {
-      body * {
-        visibility: hidden !important;
+      @page {
+        size: auto;
+        margin: 8mm;
       }
-      #printInvoiceArea, #printInvoiceArea * {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .no-print, nav, aside, #sidebar, #header, #loginScreen {
+        display: none !important;
+      }
+      #printInvoiceModal, #printInvoiceModal.hidden,
+      #printEwaySlipModal, #printEwaySlipModal.hidden {
+        display: block !important;
+        position: static !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      #printInvoiceArea, #printEwaySlipArea {
+        display: block !important;
         visibility: visible !important;
-      }
-      #printInvoiceArea {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
+        position: static !important;
         width: 100% !important;
         margin: 0 !important;
-        padding: 16px !important;
+        padding: 0 !important;
         box-shadow: none !important;
         border: none !important;
         background: white !important;
-      }
-      #printInvoiceModal {
-        background: transparent !important;
-        position: static !important;
-        display: block !important;
-        padding: 0 !important;
-      }
-      .no-print {
-        display: none !important;
       }
     }
   </style>
@@ -43,49 +54,48 @@
 
 <body class="bg-slate-100 font-sans antialiased text-slate-800">
 
-  <!-- Login & Disaster Recovery Screen -->
-  <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-8 text-slate-100 relative">
-      <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-        <div class="flex items-center space-x-3">
-          <img src="/public/logo.svg" alt="Payvibes logo" class="w-12 h-12 rounded-xl object-contain shadow-lg border border-orange-500/30 p-1 bg-red-600">
-          <div>
-            <h1 class="text-xl font-black text-white tracking-tight">Payvibes ERP</h1>
-            <p class="text-[11px] text-slate-400 font-medium">Enterprise Management Suite</p>
-          </div>
-        </div>
-        <button onclick="openModal('restoreBackupModal')" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs font-bold transition">
-          <i class="fa-solid fa-rotate-left"></i><span>Restore</span>
-        </button>
+  <!-- Login & Lock Screen (Matched to uploaded design spec) -->
+  <div id="loginScreen" class="fixed inset-0 bg-[#0c1322] z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 sm:p-10 border border-slate-100 text-slate-900 relative">
+      <!-- Circular Red Icon with Payvibes Logo -->
+      <div class="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center mx-auto mb-4 p-3 shadow-md border-2 border-red-500/20">
+        <img src="/public/logo.svg" alt="Payvibes logo" class="w-full h-full object-contain">
       </div>
 
-      <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+      <!-- Title & Subtitle -->
+      <h1 class="text-2xl font-black text-slate-900 text-center tracking-tight">Payvibes</h1>
+      <p class="text-xs text-slate-500 text-center mt-1 mb-6 font-medium">Sign in with your authorized system credentials</p>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
         <div>
-          <label class="block font-bold uppercase text-slate-400 mb-1">Corporate Email</label>
-          <input type="email" id="loginEmail" value="admin@gmail.com" required placeholder="admin@gmail.com" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-orange-500 text-slate-100">
+          <label class="block text-[10.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">EMAIL ADDRESS</label>
+          <input type="email" id="loginEmail" value="admin@gmail.com" required placeholder="Email" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition placeholder:text-slate-400">
         </div>
         <div>
-          <label class="block font-bold uppercase text-slate-400 mb-1">Password</label>
-          <input type="password" id="loginPassword" value="adiladil" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-orange-500 text-slate-100">
+          <label class="block text-[10.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">PASSWORD</label>
+          <input type="password" id="loginPassword" value="adiladil" required placeholder="••••••••" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition placeholder:text-slate-400">
         </div>
-        <div id="loginError" class="hidden text-xs text-rose-400 bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-center font-semibold">
+        <div id="loginError" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-center font-bold">
           Invalid credentials. Please verify your email or password.
         </div>
-        <button type="submit" class="w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-lg shadow-lg shadow-orange-600/30 transition text-xs">
-          <i class="fa-solid fa-lock mr-1.5"></i> Authenticate Secure Login
+        <button type="submit" class="w-full py-3 bg-[#f97316] hover:bg-[#ea580c] text-white font-bold rounded-xl shadow-md transition duration-150 text-sm flex items-center justify-center cursor-pointer">
+          Sign In to Dashboard
         </button>
       </form>
 
-      <div class="mt-6 pt-4 border-t border-slate-800">
-        <div class="text-[10px] font-bold uppercase text-slate-500 mb-2 flex justify-between">
-          <span>Quick Role Switch (Pass: adiladil)</span>
-        </div>
-        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-          <button onclick="quickFillRole('admin@gmail.com')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-left font-semibold text-orange-400">👑 Admin (Full HQ)</button>
-          <button onclick="quickFillRole('staff@gmail.com')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-left font-semibold text-cyan-400">👥 Staff (HR/Payroll)</button>
-          <button onclick="quickFillRole('accountant@gmail.com')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-left font-semibold text-emerald-400">📊 Accountant (Tax/GST)</button>
-          <button onclick="quickFillRole('cashier@gmail.com')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-left font-semibold text-purple-400">🛒 Cashier (Billing)</button>
-        </div>
+      <!-- Restore Backup & Quick Admin Fill Controls -->
+      <div class="mt-4 flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
+        <button type="button" onclick="openModal('restoreBackupModal')" class="hover:text-orange-600 font-bold flex items-center gap-1.5 transition text-[11px] text-slate-600">
+          <i class="fa-solid fa-rotate-left text-orange-500"></i><span>Restore Backup</span>
+        </button>
+        <button type="button" onclick="quickFillRole('admin@gmail.com')" class="hover:text-orange-600 font-bold text-[11px] text-slate-500">
+          Auto-fill Admin
+        </button>
+      </div>
+
+      <!-- Footer text as in image -->
+      <div class="text-[11px] text-slate-400 text-center mt-6">
+        Secure Invoicematic &amp; Inventory Management Solution
       </div>
     </div>
   </div>
@@ -204,9 +214,6 @@
 
         <div class="pt-2 mt-2 border-t border-slate-100"></div>
 
-        <button onclick="showTab('audittrail')" data-tab="audittrail" class="nav-tab-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-orange-50/60 hover:text-orange-600 font-semibold transition">
-          <i class="fa-solid fa-shield-halved w-5 text-cyan-500"></i><span>Security &amp; Audit Trail</span>
-        </button>
         <button onclick="showTab('settings')" data-tab="settings" class="nav-tab-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-orange-50/60 hover:text-orange-600 font-semibold transition">
           <i class="fa-solid fa-gear w-5 text-slate-400"></i><span>Business Settings</span>
         </button>
@@ -287,20 +294,10 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 gap-6">
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
               <h4 class="text-sm font-bold text-slate-800 mb-4">Financials Overview (Sales vs Purchases)</h4>
               <div class="h-64"><canvas id="reportsChart"></canvas></div>
-            </div>
-            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-              <h4 class="text-sm font-bold text-slate-800 mb-4">Live Activity Tracking Audit Trail</h4>
-              <div class="overflow-y-auto max-h-64">
-                <table class="w-full text-xs text-left">
-                  <tbody id="trackingTableBody">
-                    <tr><td colspan="2" class="p-4 text-center text-slate-400">No activity recorded yet.</td></tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         </div>
@@ -715,31 +712,6 @@
               <button onclick="searchClientPortal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-xs shadow">Search Account</button>
             </div>
             <div id="portalResultArea" class="mt-4"></div>
-          </div>
-        </div>
-
-        <!-- Tab 11: Security & Audit Trail -->
-        <div id="tab-audittrail" class="tab-content hidden space-y-6">
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <h4 class="text-sm font-extrabold text-slate-900">Security &amp; Immutable Audit Trail</h4>
-              <p class="text-[11px] text-slate-500">Every invoice creation, deletion, login, and data restore is logged with actor &amp; timestamp.</p>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <table class="w-full text-xs text-left border-collapse">
-              <thead class="bg-slate-50 text-slate-600 uppercase border-b border-slate-200 font-bold">
-                <tr>
-                  <th class="p-3">Timestamp</th>
-                  <th class="p-3">User &amp; Role</th>
-                  <th class="p-3">Action</th>
-                  <th class="p-3">Module</th>
-                  <th class="p-3">Details</th>
-                </tr>
-              </thead>
-              <tbody id="auditTrailTableBody"></tbody>
-            </table>
           </div>
         </div>
 
@@ -1949,11 +1921,14 @@
           <i class="fa-solid fa-truck-fast text-cyan-400"></i>
           <span class="font-bold text-sm">Official E-Way Bill Transit Permit Slip</span>
         </div>
-        <div class="flex items-center gap-3">
-          <button onclick="window.print()" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-xs shadow-md flex items-center gap-1.5 transition">
+        <div class="flex items-center gap-2">
+          <button onclick="printDocument('printEwaySlipArea')" class="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-xs shadow-md flex items-center gap-1.5 transition cursor-pointer">
             <i class="fa-solid fa-print"></i><span>Print Waybill</span>
           </button>
-          <button onclick="closeModal('printEwaySlipModal')" class="text-slate-400 hover:text-white text-lg">
+          <button onclick="downloadDocumentCopy('printEwaySlipArea', 'EWayBill_Transit_Permit.html')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Save offline copy if printer is not connected">
+            <i class="fa-solid fa-download text-cyan-400"></i><span>Save Copy</span>
+          </button>
+          <button onclick="closeModal('printEwaySlipModal')" class="text-slate-400 hover:text-white text-lg ml-1">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -2137,11 +2112,14 @@
           <i class="fa-solid fa-print text-orange-500"></i>
           <span class="font-bold text-sm">Official Invoice Print &amp; Export Preview</span>
         </div>
-        <div class="flex items-center gap-3">
-          <button onclick="window.print()" class="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-bold text-xs shadow-md flex items-center gap-1.5 transition">
+        <div class="flex items-center gap-2">
+          <button onclick="printDocument('printInvoiceArea')" class="px-4 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-bold text-xs shadow-md flex items-center gap-1.5 transition cursor-pointer">
             <i class="fa-solid fa-print"></i><span>Print Document</span>
           </button>
-          <button onclick="closeModal('printInvoiceModal')" class="text-slate-400 hover:text-white text-lg">
+          <button onclick="downloadDocumentCopy('printInvoiceArea', 'Invoice_Print_Copy.html')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Save offline copy if printer is not connected">
+            <i class="fa-solid fa-download text-orange-400"></i><span>Save Copy</span>
+          </button>
+          <button onclick="closeModal('printInvoiceModal')" class="text-slate-400 hover:text-white text-lg ml-1">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
