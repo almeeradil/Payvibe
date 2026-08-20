@@ -1023,6 +1023,8 @@ export const getInitialData = (): AppStateData => ({
     loyaltyPointsRate: 1, // 1 point per 100 spent
     cashbackPct: 2, // 2% digital wallet cashback
     autoSyncPayrollToExpense: true,
+    inventoryReorderPoint: 20, // Global reorder point threshold (20 units)
+    criticalStockThreshold: 5, // Critical emergency stock level (5 units)
   },
   counters: {
     inv: 1003,
