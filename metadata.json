@@ -1,6 +1,10 @@
 {
   "name": "Payvibes Enterprise ERP",
   "description": "Comprehensive ERP with Invoicing, Statutory E-Way Bill & IRN E-Invoicing, GST & Tax Filing, TDS/TCS, Bank Reconciliation, Multi-Store HQ, Loyalty Wallet, Automated Reminders, and HR & Payroll.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
