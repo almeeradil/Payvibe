@@ -27,8 +27,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onRestoreBackup, 
   onRestoreData 
 }) => {
-  const [email, setEmail] = useState('admin@gmail.com');
-  const [password, setPassword] = useState('adiladil');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<{ text: string; success: boolean } | null>(null);
@@ -48,6 +48,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     if (cleanEmail === 'admin@gmail.com' && cleanPass === 'adiladil') {
       triggerLogin('Admin', cleanEmail);
+    } else if ((cleanEmail === 'employ@gmail.com' || cleanEmail === 'employee@gmail.com') && cleanPass === 'adiladil') {
+      triggerLogin('Employee', cleanEmail);
     } else if (cleanEmail === 'staff@gmail.com' && cleanPass === 'adiladil') {
       triggerLogin('Staff Manager', cleanEmail);
     } else if (cleanEmail === 'accountant@gmail.com' && cleanPass === 'adiladil') {
@@ -59,12 +61,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     } else {
       setError('Invalid enterprise credentials. Please check your email or password.');
     }
-  };
-
-  const handleQuickLogin = (role: UserRole, defaultEmail: string) => {
-    setEmail(defaultEmail);
-    setPassword('adiladil');
-    setError('');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,11 +102,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10 text-slate-100">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black shadow-lg shadow-orange-600/30">
-              PV
+            <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/30 overflow-hidden p-1">
+              <img
+                src="https://raw.githubusercontent.com/zuraizadil32-cyber/Payvubes/main/logo.png"
+                alt="Payvibes logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">PAYVIBES ERP</h1>
+              <h1 className="text-lg font-black tracking-tight text-white">Payvibes</h1>
               <p className="text-[11px] text-slate-400 font-medium">Enterprise Management Suite</p>
             </div>
           </div>
@@ -169,43 +169,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <span>Authenticate Secure Login</span>
           </button>
         </form>
-
-        <div className="mt-6 pt-5 border-t border-slate-800/80">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-between">
-            <span>Quick Role Selector (Auto-fill)</span>
-            <span className="text-[10px] text-slate-600">Password: adiladil</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-            <button
-              onClick={() => handleQuickLogin('Admin', 'admin@gmail.com')}
-              className="px-2.5 py-1.5 rounded bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-left font-medium transition cursor-pointer"
-            >
-              👑 <strong className="text-orange-400">Admin</strong> (Full HQ)
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('Staff Manager', 'staff@gmail.com')}
-              className="px-2.5 py-1.5 rounded bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-left font-medium transition cursor-pointer"
-            >
-              👥 <strong className="text-cyan-400">Staff Mgr</strong> (HR/Payroll)
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('Accountant', 'accountant@gmail.com')}
-              className="px-2.5 py-1.5 rounded bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-left font-medium transition cursor-pointer"
-            >
-              📊 <strong className="text-emerald-400">Accountant</strong> (GST/TDS)
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('Cashier', 'cashier@gmail.com')}
-              className="px-2.5 py-1.5 rounded bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-left font-medium transition cursor-pointer"
-            >
-              🛒 <strong className="text-purple-400">Cashier</strong> (POS/Billing)
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Restore Backup Modal */}
