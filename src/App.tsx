@@ -65,10 +65,94 @@ export default function App() {
   const [selectedEwayInvoice, setSelectedEwayInvoice] = useState<SalesInvoice | undefined>();
   const [showStockTransferModal, setShowStockTransferModal] = useState(false);
 
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+
   // Sync state to local storage on changes
   useEffect(() => {
     saveStoredData(data);
   }, [data]);
+
+  const handleGlobalVoiceInvoice = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser doesn't support voice recognition.");
+      return;
+    }
+
+    setIsVoiceListening(true);
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = async (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setIsVoiceListening(false);
+      
+      try {
+        // We simulate a loading state or just process directly
+        const response = await fetch('/api/gemini/voice-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: transcript }),
+        });
+        
+        if (!response.ok) throw new Error('Failed to process voice command');
+        const resData = await response.json();
+        if (resData.error) throw new Error(resData.error);
+        
+        const result = resData.result;
+        
+        let customerName = result.customerName || 'Walk-in Customer';
+        let contact = '';
+        let matchedCustomer = data.customers.find(
+          c => c.name.toLowerCase().includes(customerName.toLowerCase())
+        );
+
+        if (matchedCustomer) {
+          customerName = matchedCustomer.name;
+          contact = matchedCustomer.contact;
+        }
+
+        const newInvoice: SalesInvoice = {
+          id: 'inv-' + Math.random().toString(36).substr(2, 9),
+          inv: 'INV-' + Math.floor(Math.random() * 1000000).toString(),
+          date: new Date().toISOString().split('T')[0],
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          custName: customerName,
+          contact: contact,
+          status: 'Unpaid',
+          subtotal: (result.qty || 1) * (result.rate || 0),
+          discount: 0,
+          totalTax: ((result.qty || 1) * (result.rate || 0)) * 0.18,
+          amount: ((result.qty || 1) * (result.rate || 0)) * 1.18,
+          items: [
+            {
+              id: 'item-' + Math.random().toString(36).substr(2, 7),
+              name: result.productName || 'Voice Item',
+              qty: result.qty || 1,
+              price: result.rate || 0,
+              taxPercent: 18,
+              total: ((result.qty || 1) * (result.rate || 0)) * 1.18
+            }
+          ]
+        };
+
+        handleSaveInvoice(newInvoice);
+        alert(`Invoice created successfully via Voice for ${customerName}`);
+      } catch (err: any) {
+        alert(err.message || 'Error processing voice command');
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      alert(`Voice recognition error: ${event.error}`);
+      setIsVoiceListening(false);
+    };
+
+    recognition.start();
+  };
 
   // Login handler
   const handleLogin = (role: UserRole) => {
@@ -534,20 +618,20 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900">
       {/* Top Main Navigation Header */}
       <Header
-        companyName={data.settings.company}
-        userRole={data.currentUserRole}
-        currentBranchId={data.currentBranchId}
+        currentTabTitle={activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace('_', ' ')}
         branches={data.branches}
-        onRoleChange={handleRoleChange}
+        currentBranchId={data.currentBranchId}
         onBranchChange={handleBranchChange}
+        currentUserRole={data.currentUserRole}
+        onRoleChange={handleRoleChange}
+        onOpenNewInvoice={() => {}}
+        onOpenBarcode={() => {}}
         onOpenClientPortal={() => setShowClientPortal(true)}
-        onOpenStockTransfer={() => setShowStockTransferModal(true)}
-        onOpenEwayBill={() => {
-          setSelectedEwayInvoice(data.orders[0]);
-          setShowEwayModal(true);
-        }}
-        onExportBackup={exportBackupJson}
-        onLogout={handleLogout}
+        onQuickRefresh={() => {}}
+        searchTerm={globalSearchTerm}
+        onSearchChange={setGlobalSearchTerm}
+        onVoiceInvoice={handleGlobalVoiceInvoice}
+        isVoiceListening={isVoiceListening}
       />
 
       {/* Main Content Layout with Sidebar */}
