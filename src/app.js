@@ -57,20 +57,34 @@ function logAuditEvent(action, module, details) {
 }
 
 // Authentication & Role Switching
+function isEmployeeRole() {
+  const role = (window.userData && window.userData.currentUserRole) || 'Admin';
+  return role === 'Employee';
+}
+
 function handleLogin(e) {
   if (e && e.preventDefault) e.preventDefault();
   const emailInput = document.getElementById('loginEmail');
   const passInput = document.getElementById('loginPassword');
-  const email = emailInput ? emailInput.value.trim() : 'admin@gmail.com';
-  const pass = passInput ? passInput.value.trim() : 'adiladil';
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+  const pass = passInput ? passInput.value.trim() : '';
 
-  let role = 'Admin';
-  if (email.includes('staff')) role = 'Staff Manager';
-  else if (email.includes('accountant')) role = 'Accountant';
-  else if (email.includes('cashier')) role = 'Cashier';
-  else if (email.includes('store')) role = 'Store Manager';
+  let role = null;
+  if (email === 'admin@gmail.com' && pass === 'adiladil') {
+    role = 'Admin';
+  } else if ((email === 'employ@gmail.com' || email === 'employee@gmail.com') && pass === 'adiladil') {
+    role = 'Employee';
+  } else if (email === 'staff@gmail.com' && pass === 'adiladil') {
+    role = 'Staff Manager';
+  } else if (email === 'accountant@gmail.com' && pass === 'adiladil') {
+    role = 'Accountant';
+  } else if (email === 'cashier@gmail.com' && pass === 'adiladil') {
+    role = 'Cashier';
+  } else if (email === 'store@gmail.com' && pass === 'adiladil') {
+    role = 'Store Manager';
+  }
 
-  if (pass === 'adiladil' || pass === 'admin' || pass.length >= 4) {
+  if (role) {
     if (!window.userData) window.userData = {};
     window.userData.currentUserRole = role;
     
@@ -93,18 +107,17 @@ function handleLogin(e) {
 }
 
 function quickFillRole(email) {
-  const emailEl = document.getElementById('loginEmail');
-  const passEl = document.getElementById('loginPassword');
-  const errEl = document.getElementById('loginError');
-  if (emailEl) emailEl.value = email;
-  if (passEl) passEl.value = 'adiladil';
-  if (errEl) errEl.classList.add('hidden');
+  // Deprecated
 }
 
 function logout() {
   logAuditEvent('LOGOUT', 'Security', 'User logged out');
   const appContainer = document.getElementById('appContainer');
   const loginScreen = document.getElementById('loginScreen');
+  const emailInput = document.getElementById('loginEmail');
+  const passInput = document.getElementById('loginPassword');
+  if (emailInput) emailInput.value = '';
+  if (passInput) passInput.value = '';
   if (appContainer) appContainer.classList.add('hidden');
   if (loginScreen) loginScreen.classList.remove('hidden');
 }
@@ -174,7 +187,7 @@ function showTab(tabName) {
       ewaybill: 'Government E-Way Bill & IRN E-Invoicing Portal'
     };
     const titleEl = document.getElementById('currentTabTitle');
-    if (titleEl) titleEl.innerText = titles[tabName] || 'Payvibes ERP';
+    if (titleEl) titleEl.innerText = titles[tabName] || 'Payvibes';
   }
 
   // Update Active Navigation Tab Styling (Orange Active State)
@@ -1811,6 +1824,8 @@ function renderEwayBills() {
     return;
   }
 
+  const isEmp = isEmployeeRole();
+
   ewbList.forEach(e => {
     let statusClass = 'bg-cyan-100 text-cyan-800 border-cyan-200';
     if (e.status === 'In-Transit') statusClass = 'bg-purple-100 text-purple-800 border-purple-200';
@@ -1859,12 +1874,14 @@ function renderEwayBills() {
               <i class="fa-solid fa-location-dot"></i>
               <span class="hidden xl:inline text-[10px]">Track</span>
             </button>
-            <button onclick="editEwayBill('${e.id || e.ewbNo}')" title="Edit Consignment Details" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition">
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteEwayBill('${e.id || e.ewbNo}')" title="Cancel / Delete Waybill" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition">
-              <i class="fa-solid fa-trash"></i>
-            </button>
+            ${!isEmp ? `
+              <button onclick="editEwayBill('${e.id || e.ewbNo}')" title="Edit Consignment Details" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button onclick="deleteEwayBill('${e.id || e.ewbNo}')" title="Cancel / Delete Waybill" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            ` : ''}
           </div>
         </td>
       </tr>
@@ -1969,7 +1986,7 @@ function sendOverdueReminder(invNo) {
   const order = (window.userData?.orders || []).find(o => o.inv === invNo);
   if (!order) return;
   const phone = (order.custPhone || '923001234567').replace(/[^0-9]/g, '');
-  const msg = encodeURIComponent(`*PAYMENT OVERDUE REMINDER*\nDear ${order.custName},\nInvoice ${order.inv} for Rs ${order.amount.toFixed(2)} is pending payment. Please settle your account via Bank/Cash.\nThank you, Payvibes ERP.`);
+  const msg = encodeURIComponent(`*PAYMENT OVERDUE REMINDER*\nDear ${order.custName},\nInvoice ${order.inv} for Rs ${order.amount.toFixed(2)} is pending payment. Please settle your account via Bank/Cash.\nThank you, Payvibes.`);
   window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   logAuditEvent('REMINDER_SENT', 'Communication', `Sent WhatsApp payment reminder to ${order.custName} for ${order.inv}`);
 }
@@ -2225,6 +2242,7 @@ function renderOrders() {
     tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-400">No invoices recorded for this branch.</td></tr>';
     return;
   }
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = filtered.map(o => `
     <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
       <td class="p-3 font-mono font-bold text-orange-600">
@@ -2247,15 +2265,19 @@ function renderOrders() {
       <td class="p-3 text-right space-x-1 whitespace-nowrap">
         <button onclick="openPrintInvoice('${o.inv}', 'TAX INVOICE')" title="Print Invoice" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold"><i class="fa-solid fa-print"></i></button>
         <button onclick="openPrintEwaySlip('${o.eWayBillNo || o.inv}')" title="Print E-Way Bill Slip" class="p-1.5 bg-cyan-50 text-cyan-600 hover:bg-cyan-100 rounded-lg text-xs font-bold"><i class="fa-solid fa-truck-fast"></i></button>
-        <button onclick="editOrder('${o.inv}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs font-bold"><i class="fa-solid fa-pen-to-square"></i></button>
+        ${!isEmp ? `<button onclick="editOrder('${o.inv}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs font-bold"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
         <button onclick="sendWhatsappInvoice('${o.inv}')" title="Send WhatsApp" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs"><i class="fa-brands fa-whatsapp"></i></button>
-        <button onclick="deleteOrder('${o.inv}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="deleteOrder('${o.inv}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deleteOrder(inv) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   if (confirm(`Delete invoice ${inv}?`)) {
     window.userData.orders = (window.userData.orders || []).filter(o => o.inv !== inv);
     logAuditEvent('DELETE_INVOICE', 'Sales', `Deleted invoice ${inv}`);
@@ -2268,6 +2290,7 @@ function renderPurchaseInvoices() {
   const tbody = document.getElementById('purchaseInvoicesTableBody');
   if (!tbody || !window.userData) return;
   const filtered = filterByBranch(window.userData.purchaseinvoices || []);
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = filtered.map(p => `
     <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
       <td class="p-3 font-mono font-bold text-emerald-600">${p.ref}</td>
@@ -2278,8 +2301,8 @@ function renderPurchaseInvoices() {
       <td class="p-3 font-black">Rs ${p.amt.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
         <button onclick="openPrintInvoice('${p.ref}', 'PURCHASE BILL')" title="Print" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
-        <button onclick="editPurchaseInvoice('${p.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deletePurchaseInvoice('${p.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editPurchaseInvoice('${p.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deletePurchaseInvoice('${p.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -2457,6 +2480,7 @@ function renderInventory() {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody || !window.userData) return;
   const filtered = filterByBranch(window.userData.inventory || []);
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = filtered.map(i => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-bold text-slate-900">${i.name}</td>
@@ -2467,14 +2491,18 @@ function renderInventory() {
       <td class="p-3 font-semibold">Rs ${i.purchasePrice}</td>
       <td class="p-3 font-bold text-orange-600">Rs ${i.salePrice}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editInventoryItem('${i.id}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteInventoryItem('${i.id}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editInventoryItem('${i.id}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deleteInventoryItem('${i.id}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deleteInventoryItem(id) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   window.userData.inventory = (window.userData.inventory || []).filter(i => i.id !== id);
   persistData();
   renderAll();
@@ -2484,6 +2512,7 @@ function renderCustomers() {
   const tbody = document.getElementById('customerTableBody');
   if (!tbody || !window.userData) return;
   const customers = window.userData.customers || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = customers.map(c => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-bold text-slate-900">${c.name}</td>
@@ -2493,14 +2522,18 @@ function renderCustomers() {
       <td class="p-3 font-bold text-purple-600">${c.loyaltyPoints || 0} pts</td>
       <td class="p-3 font-black text-rose-600">Rs ${(c.credit || 0).toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editCustomer('${c.id}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteCustomer('${c.id}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editCustomer('${c.id}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deleteCustomer('${c.id}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deleteCustomer(id) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   window.userData.customers = (window.userData.customers || []).filter(c => c.id !== id);
   persistData();
   renderAll();
@@ -2510,6 +2543,7 @@ function renderSuppliers() {
   const tbody = document.getElementById('supplierTableBody');
   if (!tbody || !window.userData) return;
   const suppliers = window.userData.suppliers || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = suppliers.map(s => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-bold text-slate-900">${s.name}</td>
@@ -2518,14 +2552,18 @@ function renderSuppliers() {
       <td class="p-3 font-mono text-[11px]">${s.ntnTax || '-'}</td>
       <td class="p-3 font-black text-slate-900">Rs ${(s.credit || 0).toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editSupplier('${s.id}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteSupplier('${s.id}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editSupplier('${s.id}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deleteSupplier('${s.id}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deleteSupplier(id) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   window.userData.suppliers = (window.userData.suppliers || []).filter(s => s.id !== id);
   persistData();
   renderAll();
@@ -2535,6 +2573,7 @@ function renderQuotations() {
   const tbody = document.getElementById('quotationsTableBody');
   if (!tbody || !window.userData) return;
   const quotations = window.userData.quotations || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = quotations.map(q => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-bold">${q.customer}</td>
@@ -2544,8 +2583,8 @@ function renderQuotations() {
       <td class="p-3">${q.date}</td>
       <td class="p-3 text-right space-x-1">
         <button onclick="openPrintInvoice('${q.qno}', 'SALES QUOTATION')" title="Print" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
-        <button onclick="editQuotation('${q.qno}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="window.userData.quotations=window.userData.quotations.filter(x=>x.qno!=='${q.qno}');persistData();renderQuotations();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editQuotation('${q.qno}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="window.userData.quotations=window.userData.quotations.filter(x=>x.qno!=='${q.qno}');persistData();renderQuotations();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -2555,6 +2594,7 @@ function renderDebitNotes() {
   const tbody = document.getElementById('debitTableBody');
   if (!tbody || !window.userData) return;
   const debitnotes = window.userData.debitnotes || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = debitnotes.map(d => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-mono font-bold text-rose-600">${d.ref}</td>
@@ -2565,8 +2605,8 @@ function renderDebitNotes() {
       <td class="p-3 font-black">Rs ${d.amt}</td>
       <td class="p-3 text-right space-x-1">
         <button onclick="openPrintInvoice('${d.ref}', 'DEBIT NOTE')" title="Print" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
-        <button onclick="editDebitNote('${d.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="window.userData.debitnotes=window.userData.debitnotes.filter(x=>x.ref!=='${d.ref}');persistData();renderDebitNotes();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editDebitNote('${d.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="window.userData.debitnotes=window.userData.debitnotes.filter(x=>x.ref!=='${d.ref}');persistData();renderDebitNotes();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -2576,6 +2616,7 @@ function renderPatients() {
   const tbody = document.getElementById('patientsTableBody');
   if (!tbody || !window.userData) return;
   const patients = window.userData.patients || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = patients.map((p, idx) => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-bold">${p.name} <span class="text-xs text-slate-400">(${p.age}y)</span></td>
@@ -2584,14 +2625,18 @@ function renderPatients() {
       <td class="p-3">${p.service}</td>
       <td class="p-3 font-black text-emerald-600">Rs ${p.fee}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editPatient(${idx})" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deletePatient(${idx})" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editPatient(${idx})" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deletePatient(${idx})" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deletePatient(idx) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   window.userData.patients.splice(idx, 1);
   persistData();
   renderAll();
@@ -2601,6 +2646,7 @@ function renderPurchases() {
   const tbody = document.getElementById('purchasesTableBody');
   if (!tbody || !window.userData) return;
   const purchases = window.userData.purchases || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = purchases.map(p => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-mono font-bold text-emerald-600">${p.ref}</td>
@@ -2609,8 +2655,8 @@ function renderPurchases() {
       <td class="p-3 font-black">Rs ${p.amt.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
         <button onclick="openPrintInvoice('${p.ref}', 'PURCHASE ORDER')" title="Print" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
-        <button onclick="editPurchase('${p.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="window.userData.purchases=window.userData.purchases.filter(x=>x.ref!=='${p.ref}');persistData();renderPurchases();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editPurchase('${p.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="window.userData.purchases=window.userData.purchases.filter(x=>x.ref!=='${p.ref}');persistData();renderPurchases();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -2620,6 +2666,7 @@ function renderPayouts() {
   const tbody = document.getElementById('payoutsTableBody');
   if (!tbody || !window.userData) return;
   const payouts = window.userData.payouts || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = payouts.map(p => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-mono font-bold text-purple-600">${p.voucher}</td>
@@ -2627,8 +2674,8 @@ function renderPayouts() {
       <td class="p-3">${p.mode}</td>
       <td class="p-3 font-black text-rose-600">Rs ${p.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editPayout('${p.voucher}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="window.userData.payouts=window.userData.payouts.filter(x=>x.voucher!=='${p.voucher}');persistData();renderPayouts();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editPayout('${p.voucher}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="window.userData.payouts=window.userData.payouts.filter(x=>x.voucher!=='${p.voucher}');persistData();renderPayouts();" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -2638,6 +2685,7 @@ function renderExpenses() {
   const tbody = document.getElementById('expensesTableBody');
   if (!tbody || !window.userData) return;
   const expenses = window.userData.expenses || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = expenses.map(e => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-mono font-bold text-rose-600">${e.ref}</td>
@@ -2648,14 +2696,18 @@ function renderExpenses() {
       <td class="p-3">${e.mode}</td>
       <td class="p-3 font-black text-rose-600">Rs ${e.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editExpense('${e.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteExpense('${e.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editExpense('${e.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deleteExpense('${e.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deleteExpense(ref) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   window.userData.expenses = (window.userData.expenses || []).filter(e => e.ref !== ref);
   persistData();
   renderAll();
@@ -2665,6 +2717,7 @@ function renderCashBank() {
   const tbody = document.getElementById('cashbankTableBody');
   if (!tbody || !window.userData) return;
   const cashbank = window.userData.cashbank || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = cashbank.map(c => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-mono font-bold text-emerald-600">${c.ref}</td>
@@ -2674,14 +2727,18 @@ function renderCashBank() {
       <td class="p-3 text-slate-600">${c.desc}</td>
       <td class="p-3 font-black">Rs ${c.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editCashBank('${c.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteCashBank('${c.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editCashBank('${c.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deleteCashBank('${c.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
 }
 
 function deleteCashBank(ref) {
+  if (isEmployeeRole()) {
+    alert('Permission Denied: Employee role cannot delete records.');
+    return;
+  }
   window.userData.cashbank = (window.userData.cashbank || []).filter(c => c.ref !== ref);
   persistData();
   renderAll();
@@ -2691,6 +2748,7 @@ function renderOtherIncome() {
   const tbody = document.getElementById('incomeTableBody');
   if (!tbody || !window.userData) return;
   const otherincome = window.userData.otherincome || [];
+  const isEmp = isEmployeeRole();
   tbody.innerHTML = otherincome.map(i => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-mono font-bold text-amber-600">${i.ref}</td>
@@ -2700,8 +2758,8 @@ function renderOtherIncome() {
       <td class="p-3">${i.account}</td>
       <td class="p-3 font-black text-emerald-600">Rs ${i.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
-        <button onclick="editIncome('${i.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteOtherIncome('${i.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+        ${!isEmp ? `<button onclick="editIncome('${i.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+        ${!isEmp ? `<button onclick="deleteOtherIncome('${i.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
     </tr>
   `).join('');
