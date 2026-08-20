@@ -306,7 +306,12 @@
               <h4 class="text-sm font-bold text-slate-800">GST Sales Tax Invoices &amp; E-Invoicing</h4>
               <p class="text-[11px] text-slate-500">Automated IRN generation, E-Way Bill linkage, and WhatsApp invoice dispatch.</p>
             </div>
-            <button onclick="openModal('orderModal')" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-xs shadow transition">Create Invoice</button>
+            <div class="flex gap-2">
+              <input type="file" id="ocrFileInput" accept="image/*" class="hidden" onchange="handleOcrUpload(event)">
+              <button onclick="document.getElementById('ocrFileInput').click()" class="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-xs transition"><i class="fa-solid fa-camera mr-1"></i>Scan Receipt</button>
+              <button onclick="handleVoiceCommand()" class="px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg font-bold text-xs transition" id="voiceInvoiceBtn"><i class="fa-solid fa-microphone mr-1"></i>Voice Invoice</button>
+              <button onclick="openModal('orderModal')" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-xs shadow transition">Create Invoice</button>
+            </div>
           </div>
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <table class="w-full text-xs text-left border-collapse">
@@ -455,7 +460,12 @@
         <div id="tab-purchaseinvoices" class="tab-content hidden space-y-4">
           <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <h4 class="text-sm font-bold text-slate-800">Purchase Invoices Directory</h4>
-            <button onclick="openModal('purchaseInvoiceModal')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow transition">Create Purchase Invoice</button>
+            <div class="flex gap-2">
+              <input type="file" id="ocrPinvFileInput" accept="image/*" class="hidden" onchange="handleOcrUploadPinv(event)">
+              <button onclick="document.getElementById('ocrPinvFileInput').click()" class="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-xs transition"><i class="fa-solid fa-camera mr-1"></i>Scan Receipt</button>
+              <button onclick="handleVoiceCommandPinv()" class="px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg font-bold text-xs transition" id="voicePinvBtn"><i class="fa-solid fa-microphone mr-1"></i>Voice Invoice</button>
+              <button onclick="openModal('purchaseInvoiceModal')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow transition">Create Purchase Invoice</button>
+            </div>
           </div>
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <table class="w-full text-xs text-left border-collapse">
