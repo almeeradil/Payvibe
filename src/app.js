@@ -482,6 +482,16 @@ function openPrintInvoice(docId, docType = 'PROFORMA INVOICE') {
   if (document.getElementById('prCompanyState')) document.getElementById('prCompanyState').innerText = 'Punjab, 54000';
   if (document.getElementById('prCompanyPhone')) document.getElementById('prCompanyPhone').innerText = settings.phone || '+92 3086707676';
 
+  const logoEl = document.getElementById('prCompanyLogo');
+  if (logoEl) {
+    if (settings.companyLogo) {
+      logoEl.src = settings.companyLogo;
+      logoEl.classList.remove('hidden');
+    } else {
+      logoEl.classList.add('hidden');
+    }
+  }
+
   // Set Invoice Details
   const invNo = order.inv || order.ref || order.qno || 'INV-1001';
   const invDate = order.date || new Date().toISOString().split('T')[0];
@@ -1418,7 +1428,7 @@ function saveTdsEntry() {
   renderAll();
 }
 
-function saveSetting() {
+function saveSettings() {
   if (!window.userData.settings) window.userData.settings = {};
   if (document.getElementById('setCompany')) window.userData.settings.company = document.getElementById('setCompany').value;
   if (document.getElementById('setPhone')) window.userData.settings.phone = document.getElementById('setPhone').value;
@@ -1430,9 +1440,39 @@ function saveSetting() {
 
   logAuditEvent('UPDATE_SETTINGS', 'Settings', 'Updated company profile and statutory parameters.');
   persistData();
-  alert("Settings saved successfully!");
+  
+  // Show Green Notification Toast
+  const toast = document.createElement('div');
+  toast.innerText = 'Your settings are saved.';
+  toast.className = 'fixed bottom-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-2xl z-[9999] transition-opacity duration-300';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+
   renderAll();
 }
+
+function handleLogoUpload(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64 = e.target.result;
+      const preview = document.getElementById('setLogoPreview');
+      if (preview) {
+        preview.src = base64;
+        preview.classList.remove('hidden');
+      }
+      if (!window.userData.settings) window.userData.settings = {};
+      window.userData.settings.companyLogo = base64;
+      persistData();
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 
 // 1-Click GST Return Filing
 function executeGstFiling(returnType) {
@@ -2214,11 +2254,30 @@ function renderRemainingTabs(exceptTab) {
   });
 }
 
+function renderSettingsForm() {
+  if (!window.userData || !window.userData.settings) return;
+  const s = window.userData.settings;
+  if (document.getElementById('setCompany')) document.getElementById('setCompany').value = s.company || '';
+  if (document.getElementById('setPhone')) document.getElementById('setPhone').value = s.phone || '';
+  if (document.getElementById('setEmail')) document.getElementById('setEmail').value = s.email || '';
+  if (document.getElementById('setAddress')) document.getElementById('setAddress').value = s.address || '';
+  if (document.getElementById('setNtn')) document.getElementById('setNtn').value = s.ntn || '';
+  if (document.getElementById('setBank')) document.getElementById('setBank').value = s.bank || '';
+  if (document.getElementById('setFooter')) document.getElementById('setFooter').value = s.footer || '';
+  
+  const preview = document.getElementById('setLogoPreview');
+  if (preview && s.companyLogo) {
+    preview.src = s.companyLogo;
+    preview.classList.remove('hidden');
+  }
+}
+
 // Render Functions
 function renderAll() {
   if (!window.userData) return;
   renderStats();
   renderTracking();
+  renderSettingsForm();
   
   // Identify active tab and render immediately
   const activeTabEl = document.querySelector('.tab-content:not(.hidden)');
@@ -3125,7 +3184,8 @@ window.saveIncome = saveIncome;
 window.savePunch = savePunch;
 window.savePayroll = savePayroll;
 window.saveTdsEntry = saveTdsEntry;
-window.saveSetting = saveSetting;
+window.saveSettings = saveSettings;
+window.handleLogoUpload = handleLogoUpload;
 window.executeGstFiling = executeGstFiling;
 window.autoReconcileBank = autoReconcileBank;
 window.populateTransferItemSelect = populateTransferItemSelect;
