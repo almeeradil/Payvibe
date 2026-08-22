@@ -567,6 +567,146 @@ function openPrintInvoice(docId, docType = 'PROFORMA INVOICE') {
   openModal('printInvoiceModal');
 }
 
+function openPrintVoucherCustom(data) {
+  const settings = (window.userData && window.userData.settings) || {};
+  const branch = ((window.userData && window.userData.branches) || []).find(b => b.id === (window.userData && window.userData.currentBranchId)) || { name: 'Central HQ (Main Hub)', location: 'Lahore, Punjab' };
+
+  if (document.getElementById('prDocType')) document.getElementById('prDocType').innerText = data.docType;
+  if (document.getElementById('prCompanyName')) document.getElementById('prCompanyName').innerText = (settings.company || 'PAYVIBES PHARMA & GENERAL STORE').toUpperCase();
+  if (document.getElementById('prCompanyAddress')) document.getElementById('prCompanyAddress').innerText = settings.address || 'Main Commercial Plaza, Ferozepur Road';
+  if (document.getElementById('prCompanyCity')) document.getElementById('prCompanyCity').innerText = branch.location || 'Lahore, Punjab';
+  if (document.getElementById('prCompanyPhone')) document.getElementById('prCompanyPhone').innerText = settings.phone || '+92 3086707676';
+
+  if (document.getElementById('prInvNo')) document.getElementById('prInvNo').innerText = data.invNo;
+  if (document.getElementById('prInvDate')) document.getElementById('prInvDate').innerText = data.invDate;
+
+  if (document.getElementById('prCustName')) document.getElementById('prCustName').innerText = data.recipient;
+  if (document.getElementById('prCustStreet')) document.getElementById('prCustStreet').innerText = data.address;
+  if (document.getElementById('prCustCity')) document.getElementById('prCustCity').innerText = branch.location || 'Lahore';
+  if (document.getElementById('prCustPhone')) document.getElementById('prCustPhone').innerText = data.mode || 'N/A';
+
+  const tbody = document.getElementById('prItemsBody');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr class="border-b border-slate-900">
+        <td class="border-r border-slate-900 p-2 font-bold">${data.itemName}</td>
+        <td class="border-r border-slate-900 p-2 text-center font-semibold">1</td>
+        <td class="border-r border-slate-900 p-2 text-center">${data.category || 'Voucher'}</td>
+        <td class="border-r border-slate-900 p-2 text-right">Rs ${Number(data.amount).toFixed(2)}</td>
+        <td class="border-r border-slate-900 p-2 text-center">0%</td>
+        <td class="border-r border-slate-900 p-2 text-right">Rs 0.00</td>
+        <td class="p-2 text-right font-black">Rs ${Number(data.amount).toFixed(2)}</td>
+      </tr>
+    `;
+  }
+
+  if (document.getElementById('prTotalQty')) document.getElementById('prTotalQty').innerText = '1';
+  if (document.getElementById('prAmountWords')) document.getElementById('prAmountWords').innerText = numberToWords(data.amount || 0);
+  if (document.getElementById('prSubTotal')) document.getElementById('prSubTotal').innerText = `Rs ${Number(data.amount || 0).toFixed(2)}`;
+  if (document.getElementById('prDiscount')) document.getElementById('prDiscount').innerText = `Rs 0.00`;
+  if (document.getElementById('prShippingTcs')) document.getElementById('prShippingTcs').innerText = `Rs 0.00`;
+  if (document.getElementById('prGrandTotal')) document.getElementById('prGrandTotal').innerText = `Rs ${Number(data.amount || 0).toFixed(2)}`;
+
+  openModal('printInvoiceModal');
+}
+
+function openPrintSalarySlip(idx) {
+  if (!window.userData || !window.userData.payrolls) return;
+  const p = window.userData.payrolls[idx];
+  if (!p) return alert("Salary payroll record not found.");
+
+  openPrintVoucherCustom({
+    docType: 'EMPLOYEE SALARY SLIP',
+    invNo: `PAYSLIP-${p.month ? p.month.toUpperCase() : 'M'}-${p.year || 2026}`,
+    invDate: new Date().toISOString().split('T')[0],
+    recipient: p.employeeName,
+    address: `Employee Payroll (${p.month} ${p.year}) - Status: ${p.status}`,
+    itemName: `Monthly Disbursed Salary (${p.month} ${p.year})`,
+    category: 'Salary & Payroll Disbursal',
+    mode: 'Direct Account Transfer',
+    amount: p.netSalary || 0
+  });
+}
+
+function openPrintExpenseSlip(ref) {
+  if (!window.userData || !window.userData.expenses) return;
+  const exp = window.userData.expenses.find(e => e.ref === ref);
+  if (!exp) return alert("Expense voucher details not found.");
+
+  openPrintVoucherCustom({
+    docType: 'EXPENSE VOUCHER',
+    invNo: exp.ref,
+    invDate: exp.date || new Date().toISOString().split('T')[0],
+    recipient: exp.paidTo || exp.category || 'Vendor / Expense',
+    address: `Category: ${exp.category}`,
+    itemName: exp.desc || `Business Expense - ${exp.category}`,
+    category: exp.category,
+    mode: exp.mode || 'Cash',
+    amount: exp.amount || 0
+  });
+}
+
+function openPrintCashBankSlip(ref) {
+  if (!window.userData || !window.userData.cashbank) return;
+  const cb = window.userData.cashbank.find(c => c.ref === ref);
+  if (!cb) return alert("Cash/Bank voucher details not found.");
+
+  openPrintVoucherCustom({
+    docType: 'CASH & BANK VOUCHER',
+    invNo: cb.ref,
+    invDate: cb.date || new Date().toISOString().split('T')[0],
+    recipient: cb.account,
+    address: `Transaction Type: ${cb.type}`,
+    itemName: cb.desc || `Cash & Bank - ${cb.account} (${cb.type})`,
+    category: cb.type,
+    mode: cb.account,
+    amount: cb.amount || 0
+  });
+}
+
+function openPrintOtherIncomeSlip(ref) {
+  if (!window.userData || !window.userData.otherincome) return;
+  const inc = window.userData.otherincome.find(i => i.ref === ref);
+  if (!inc) return alert("Other income record details not found.");
+
+  openPrintVoucherCustom({
+    docType: 'OTHER INCOME RECEIPT',
+    invNo: inc.ref,
+    invDate: inc.date || new Date().toISOString().split('T')[0],
+    recipient: inc.source,
+    address: `Received Into: ${inc.account}`,
+    itemName: inc.desc || `Other Income - ${inc.source}`,
+    category: 'Income Source',
+    mode: inc.account,
+    amount: inc.amount || 0
+  });
+}
+
+function openPrintPatientSlip(idx) {
+  if (!window.userData || !window.userData.patients) return;
+  const pat = window.userData.patients[idx];
+  if (!pat) return alert("Patient record not found.");
+
+  openPrintVoucherCustom({
+    docType: 'PATIENT CLINICAL RECEIPT',
+    invNo: `PAT-${1001 + idx}`,
+    invDate: new Date().toISOString().split('T')[0],
+    recipient: `${pat.name} (${pat.age}y - ${pat.gender})`,
+    address: pat.address || 'OPD Department',
+    itemName: `Medical Service: ${pat.service} (Attending Doctor: ${pat.doctor})`,
+    category: 'Patient Medical Fee',
+    mode: 'Cash OPD',
+    amount: pat.fee || 0
+  });
+}
+
+window.openPrintVoucherCustom = openPrintVoucherCustom;
+window.openPrintSalarySlip = openPrintSalarySlip;
+window.openPrintExpenseSlip = openPrintExpenseSlip;
+window.openPrintCashBankSlip = openPrintCashBankSlip;
+window.openPrintOtherIncomeSlip = openPrintOtherIncomeSlip;
+window.openPrintPatientSlip = openPrintPatientSlip;
+
 // Global Edit State Tracker
 window.editingOrderId = null;
 window.editingPurchaseInvoiceRef = null;
@@ -2521,7 +2661,7 @@ function renderPayroll() {
   const tbody = document.getElementById('payrollTableBody');
   if (!tbody || !window.userData) return;
   const payrolls = window.userData.payrolls || [];
-  tbody.innerHTML = payrolls.map(p => `
+  tbody.innerHTML = payrolls.map((p, idx) => `
     <tr class="border-b border-slate-100 hover:bg-slate-50">
       <td class="p-3 font-bold">${p.month} ${p.year}</td>
       <td class="p-3 font-bold text-slate-900">${p.employeeName}</td>
@@ -2529,7 +2669,9 @@ function renderPayroll() {
       <td class="p-3 font-black text-purple-700">Rs ${p.netSalary.toLocaleString()}</td>
       <td class="p-3"><span class="text-xs text-emerald-600 font-bold">● Auto-synced EXP</span></td>
       <td class="p-3"><span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-bold text-[10px]">${p.status}</span></td>
-      <td class="p-3 text-right"><button onclick="alert('Printing salary slip for ${p.employeeName} (${p.month} ${p.year})');" class="text-cyan-600 hover:underline font-bold text-xs"><i class="fa-solid fa-print mr-1"></i> Slip</button></td>
+      <td class="p-3 text-right">
+        <button onclick="openPrintSalarySlip(${idx})" class="px-2.5 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg text-xs font-bold flex items-center gap-1 inline-flex shadow-xs border border-purple-200"><i class="fa-solid fa-print"></i><span>Generate Slip</span></button>
+      </td>
     </tr>
   `).join('');
 }
@@ -2707,6 +2849,7 @@ function renderPatients() {
       <td class="p-3">${p.service}</td>
       <td class="p-3 font-black text-emerald-600">Rs ${p.fee}</td>
       <td class="p-3 text-right space-x-1">
+        <button onclick="openPrintPatientSlip(${idx})" title="Print Slip" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
         ${!isEmp ? `<button onclick="editPatient(${idx})" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
         ${!isEmp ? `<button onclick="deletePatient(${idx})" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
@@ -2778,6 +2921,7 @@ function renderExpenses() {
       <td class="p-3">${e.mode}</td>
       <td class="p-3 font-black text-rose-600">Rs ${e.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
+        <button onclick="openPrintExpenseSlip('${e.ref}')" title="Print Expense Voucher" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
         ${!isEmp ? `<button onclick="editExpense('${e.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
         ${!isEmp ? `<button onclick="deleteExpense('${e.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
@@ -2809,6 +2953,7 @@ function renderCashBank() {
       <td class="p-3 text-slate-600">${c.desc}</td>
       <td class="p-3 font-black">Rs ${c.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
+        <button onclick="openPrintCashBankSlip('${c.ref}')" title="Print Cash/Bank Voucher" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
         ${!isEmp ? `<button onclick="editCashBank('${c.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
         ${!isEmp ? `<button onclick="deleteCashBank('${c.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
@@ -2840,6 +2985,7 @@ function renderOtherIncome() {
       <td class="p-3">${i.account}</td>
       <td class="p-3 font-black text-emerald-600">Rs ${i.amount.toLocaleString()}</td>
       <td class="p-3 text-right space-x-1">
+        <button onclick="openPrintOtherIncomeSlip('${i.ref}')" title="Print Income Receipt" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"><i class="fa-solid fa-print"></i></button>
         ${!isEmp ? `<button onclick="editIncome('${i.ref}')" title="Edit" class="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-xs"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
         ${!isEmp ? `<button onclick="deleteOtherIncome('${i.ref}')" title="Delete" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
       </td>
@@ -3236,11 +3382,42 @@ window.deleteOtherIncome = deleteOtherIncome;
 window.renderAll = renderAll;
 window.initApp = initApp;
 
+function applyTheme() {
+  const currentTheme = localStorage.getItem('payvibes_theme') || 'light';
+  const icon = document.getElementById('themeToggleIcon');
+  const btn = document.getElementById('themeToggleBtn');
+  if (currentTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('bg-slate-900', 'text-slate-100');
+    document.body.classList.remove('bg-slate-100', 'text-slate-800');
+    if (icon) icon.className = 'fa-solid fa-sun text-amber-400';
+    if (btn) btn.title = 'Switch to Light Mode';
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.add('bg-slate-100', 'text-slate-800');
+    document.body.classList.remove('bg-slate-900', 'text-slate-100');
+    if (icon) icon.className = 'fa-solid fa-moon text-slate-600';
+    if (btn) btn.title = 'Switch to Dark Mode';
+  }
+}
+
+function toggleDarkMode() {
+  const currentTheme = localStorage.getItem('payvibes_theme') || 'light';
+  const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('payvibes_theme', nextTheme);
+  applyTheme();
+}
+
+window.toggleDarkMode = toggleDarkMode;
+window.applyTheme = applyTheme;
+
 // Auto-run on DOM Ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
+    applyTheme();
     initStorage();
   });
 } else {
+  applyTheme();
   initStorage();
 }
