@@ -2814,15 +2814,33 @@ function renderCharts() {
   const payoutCanvas = document.getElementById('payoutChart');
   const reportsCanvas = document.getElementById('reportsChart');
 
+  // Dynamic Sales Chart (Last 7 Days)
+  const today = new Date();
+  const last7Days = Array.from({length: 7}, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
+  
+  const salesByDay = last7Days.map(date => {
+    const dayOrders = (window.userData?.orders || []).filter(o => o.date === date);
+    return dayOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+  });
+  
+  const labels7Days = last7Days.map(date => {
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
+  });
+
   if (salesCanvas && window.Chart) {
     if (salesChartInstance) salesChartInstance.destroy();
     salesChartInstance = new Chart(salesCanvas, {
       type: 'line',
       data: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        labels: labels7Days,
         datasets: [{
           label: 'Sales Revenue (Rs)',
-          data: [12000, 19000, 15000, 28000, 24000, 32000, 45000],
+          data: salesByDay,
           borderColor: '#ea580c',
           backgroundColor: 'rgba(234, 88, 12, 0.1)',
           tension: 0.3,
@@ -2833,19 +2851,66 @@ function renderCharts() {
     });
   }
 
+  // Dynamic Payout/Expenses Chart
+  const expenses = window.userData?.expenses || [];
+  const expCategories = {};
+  expenses.forEach(e => {
+    const cat = e.category || 'Other';
+    expCategories[cat] = (expCategories[cat] || 0) + (e.amount || 0);
+  });
+  const expLabels = Object.keys(expCategories);
+  const expData = Object.values(expCategories);
+  
+  if (expLabels.length === 0) {
+    expLabels.push('No Expenses Yet');
+    expData.push(1);
+  }
+
   if (payoutCanvas && window.Chart) {
     if (payoutChartInstance) payoutChartInstance.destroy();
     payoutChartInstance = new Chart(payoutCanvas, {
       type: 'doughnut',
       data: {
-        labels: ['Pharma Vendors', 'Rent & Utilities', 'Salaries', 'Logistics'],
+        labels: expLabels,
         datasets: [{
-          data: [65000, 25000, 55000, 12000],
-          backgroundColor: ['#10b981', '#f59e0b', '#8b5cf6', '#06b6d4']
+          data: expData,
+          backgroundColor: ['#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#ec4899']
         }]
       },
       options: { responsive: true, maintainAspectRatio: false }
     });
+  }
+
+  // Dynamic Reports Chart (Sales vs Purchases by Month)
+  const monthMap = {};
+  (window.userData?.orders || []).forEach(o => {
+    if (!o.date) return;
+    const m = o.date.substring(0, 7);
+    if (!monthMap[m]) monthMap[m] = { sales: 0, purchases: 0 };
+    monthMap[m].sales += (o.amount || 0);
+  });
+  
+  const purchasesList = window.userData?.purchaseinvoices || window.userData?.purchases || [];
+  purchasesList.forEach(p => {
+    const d = p.date || p.dateCreated;
+    if (!d) return;
+    const m = d.substring(0, 7);
+    if (!monthMap[m]) monthMap[m] = { sales: 0, purchases: 0 };
+    monthMap[m].purchases += (p.amt || p.amount || 0);
+  });
+  
+  const sortedMonths = Object.keys(monthMap).sort();
+  const monthLabels = sortedMonths.map(m => {
+    const d = new Date(m + '-01');
+    return d.toLocaleDateString('en-US', { month: 'short' });
+  });
+  const salesData = sortedMonths.map(m => monthMap[m].sales);
+  const purchasesData = sortedMonths.map(m => monthMap[m].purchases);
+  
+  if (monthLabels.length === 0) {
+    monthLabels.push('Current Month');
+    salesData.push(0);
+    purchasesData.push(0);
   }
 
   if (reportsCanvas && window.Chart) {
@@ -2853,10 +2918,10 @@ function renderCharts() {
     reportsChartInstance = new Chart(reportsCanvas, {
       type: 'bar',
       data: {
-        labels: ['May', 'Jun', 'Jul', 'Aug'],
+        labels: monthLabels,
         datasets: [
-          { label: 'Sales', data: [180000, 220000, 310000, 450000], backgroundColor: '#ea580c' },
-          { label: 'Purchases', data: [140000, 170000, 240000, 320000], backgroundColor: '#10b981' }
+          { label: 'Sales', data: salesData, backgroundColor: '#ea580c' },
+          { label: 'Purchases', data: purchasesData, backgroundColor: '#10b981' }
         ]
       },
       options: { responsive: true, maintainAspectRatio: false }
@@ -3107,240 +3172,6 @@ window.deleteSupplier = deleteSupplier;
 window.deletePatient = deletePatient;
 window.deleteExpense = deleteExpense;
 window.deleteCashBank = deleteCashBank;
-// --- AI Integration Handlers ---
-async function handleOcrUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const btn = event.target.nextElementSibling;
-  const oldText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Scanning...';
-  btn.disabled = true;
-
-  try {
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result.split(',')[1];
-      
-      const response = await fetch('/api/gemini/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type }),
-      });
-      
-      if (!response.ok) throw new Error('OCR API failed');
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      
-      const result = data.result;
-      
-      openModal('orderModal');
-      
-      if (result.partyName) {
-        document.getElementById('invCustName').value = result.partyName;
-      }
-      if (result.date) {
-        document.getElementById('invDate').value = result.date;
-      }
-      if (result.items && result.items.length > 0) {
-        const item = result.items[0];
-        document.getElementById('invProdName').value = item.name || 'Extracted Item';
-        document.getElementById('invQty').value = item.qty || 1;
-        document.getElementById('invRate').value = item.rate || 0;
-      } else if (result.total) {
-        document.getElementById('invProdName').value = 'Extracted General Item';
-        document.getElementById('invQty').value = 1;
-        document.getElementById('invRate').value = result.total;
-      }
-      
-      calculateInvoiceTotal();
-    };
-    reader.readAsDataURL(file);
-  } catch (err) {
-    alert("Error processing OCR: " + err.message);
-  } finally {
-    btn.innerHTML = oldText;
-    btn.disabled = false;
-    event.target.value = '';
-  }
-}
-
-function handleVoiceCommand() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Your browser doesn't support voice recognition.");
-    return;
-  }
-
-  const btn = document.getElementById('voiceInvoiceBtn');
-  const oldText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-microphone fa-beat mr-1 text-red-500"></i>Listening...';
-  btn.classList.add('bg-red-100');
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Processing...';
-    btn.classList.remove('bg-red-100');
-    
-    try {
-      const response = await fetch('/api/gemini/voice-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: transcript }),
-      });
-      
-      if (!response.ok) throw new Error('Voice API failed');
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      
-      const result = data.result;
-      
-      openModal('orderModal');
-      
-      if (result.customerName) document.getElementById('invCustName').value = result.customerName;
-      document.getElementById('invProdName').value = result.productName || 'Voice Item';
-      document.getElementById('invQty').value = result.qty || 1;
-      document.getElementById('invRate').value = result.rate || 0;
-      
-      calculateInvoiceTotal();
-    } catch (err) {
-      alert("Error processing voice command: " + err.message);
-    } finally {
-      btn.innerHTML = oldText;
-    }
-  };
-
-  recognition.onerror = (event) => {
-    alert(`Voice recognition error: ${event.error}`);
-    btn.innerHTML = oldText;
-    btn.classList.remove('bg-red-100');
-  };
-
-  recognition.start();
-}
-
-async function handleOcrUploadPinv(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const btn = event.target.nextElementSibling;
-  const oldText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Scanning...';
-  btn.disabled = true;
-
-  try {
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result.split(',')[1];
-      
-      const response = await fetch('/api/gemini/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type }),
-      });
-      
-      if (!response.ok) throw new Error('OCR API failed');
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      
-      const result = data.result;
-      
-      openModal('purchaseInvoiceModal');
-      
-      if (result.partyName) {
-        document.getElementById('pinvSupplier').value = result.partyName;
-      }
-      if (result.date) {
-        document.getElementById('pinvDate').value = result.date;
-      }
-      if (result.items && result.items.length > 0) {
-        const item = result.items[0];
-        document.getElementById('pinvItem').value = item.name || 'Extracted Item';
-        document.getElementById('pinvQty').value = item.qty || 1;
-        document.getElementById('pinvRate').value = item.rate || 0;
-      } else if (result.total) {
-        document.getElementById('pinvItem').value = 'Extracted General Item';
-        document.getElementById('pinvQty').value = 1;
-        document.getElementById('pinvRate').value = result.total;
-      }
-    };
-    reader.readAsDataURL(file);
-  } catch (err) {
-    alert("Error processing OCR: " + err.message);
-  } finally {
-    btn.innerHTML = oldText;
-    btn.disabled = false;
-    event.target.value = '';
-  }
-}
-
-function handleVoiceCommandPinv() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Your browser doesn't support voice recognition.");
-    return;
-  }
-
-  const btn = document.getElementById('voicePinvBtn');
-  const oldText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-microphone fa-beat mr-1 text-red-500"></i>Listening...';
-  btn.classList.add('bg-red-100');
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Processing...';
-    btn.classList.remove('bg-red-100');
-    
-    try {
-      const response = await fetch('/api/gemini/voice-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: transcript }),
-      });
-      
-      if (!response.ok) throw new Error('Voice API failed');
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      
-      const result = data.result;
-      
-      openModal('purchaseInvoiceModal');
-      
-      if (result.customerName) document.getElementById('pinvSupplier').value = result.customerName;
-      document.getElementById('pinvItem').value = result.productName || 'Voice Item';
-      document.getElementById('pinvQty').value = result.qty || 1;
-      document.getElementById('pinvRate').value = result.rate || 0;
-      
-    } catch (err) {
-      alert("Error processing voice command: " + err.message);
-    } finally {
-      btn.innerHTML = oldText;
-    }
-  };
-
-  recognition.onerror = (event) => {
-    alert(`Voice recognition error: ${event.error}`);
-    btn.innerHTML = oldText;
-    btn.classList.remove('bg-red-100');
-  };
-
-  recognition.start();
-}
-
-window.handleOcrUpload = handleOcrUpload;
-window.handleVoiceCommand = handleVoiceCommand;
-window.handleOcrUploadPinv = handleOcrUploadPinv;
-window.handleVoiceCommandPinv = handleVoiceCommandPinv;
 window.deleteOtherIncome = deleteOtherIncome;
 window.renderAll = renderAll;
 window.initApp = initApp;
