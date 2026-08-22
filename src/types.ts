@@ -484,6 +484,7 @@ export interface SystemSettings {
   eWayPortalKey?: string;
   whatsappApiKey?: string;
   smsGatewayApiKey?: string;
+  companyLogo?: string;
   loyaltyPointsRate: number; // e.g. 1 point per 100 Rs
   cashbackPct: number; // e.g. 2% cashback
   autoSyncPayrollToExpense: boolean;
