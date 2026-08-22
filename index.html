@@ -268,10 +268,6 @@
 
         <div class="pt-2 mt-2 border-t border-slate-100"></div>
 
-        <button onclick="showTab('pricing')" data-tab="pricing" class="nav-tab-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-600 hover:bg-orange-50/60 hover:text-orange-600 font-semibold transition">
-          <span class="flex items-center space-x-3"><i class="fa-solid fa-crown w-5 text-amber-500"></i><span>Plans &amp; Subscription</span></span>
-          <span id="sidebarTrialBadge" class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded-full">30 Days Trial</span>
-        </button>
         <button onclick="showTab('settings')" data-tab="settings" class="nav-tab-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-orange-50/60 hover:text-orange-600 font-semibold transition">
           <i class="fa-solid fa-gear w-5 text-slate-400"></i><span>Business Settings</span>
         </button>
@@ -294,7 +290,6 @@
           <h3 id="currentTabTitle" class="text-base font-extrabold text-slate-800">Dashboard Overview</h3>
         </div>
         <div class="flex items-center space-x-2">
-          <div id="headerSubscriptionBadgeContainer"></div>
           <button id="themeToggleBtn" onclick="toggleDarkMode()" class="p-2 text-slate-500 hover:text-orange-500 rounded-lg hover:bg-slate-100 transition flex items-center justify-center text-sm font-bold border border-slate-200" title="Switch to Dark Mode">
             <i id="themeToggleIcon" class="fa-solid fa-moon text-slate-600"></i>
           </button>
@@ -308,20 +303,6 @@
       </header>
 
       <div class="flex-1 overflow-y-auto p-6 space-y-6">
-
-        <!-- Trial Expired Warning Banner -->
-        <div id="trialExpiredBanner" class="hidden bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white px-5 py-3 rounded-xl flex flex-wrap items-center justify-between text-xs font-bold shadow-md animate-pulse">
-          <div class="flex items-center space-x-3">
-            <i class="fa-solid fa-lock text-white text-lg"></i>
-            <div>
-              <div class="font-black text-sm">30-Day Free Trial Has Expired!</div>
-              <div class="font-medium text-[11px] text-rose-100">Adding new tax invoices and bills is now locked. Pay Rs 50,000 to 03086707676 to unlock unlimited annual access.</div>
-            </div>
-          </div>
-          <button onclick="openPaymentGateway()" class="mt-2 sm:mt-0 px-4 py-2 bg-white text-rose-700 hover:bg-rose-50 rounded-lg font-black text-xs shadow transition flex items-center gap-1.5">
-            <i class="fa-solid fa-crown text-amber-500"></i><span>Pay Rs 50,000 Now</span>
-          </button>
-        </div>
 
         <!-- Stock & Expiry Banners -->
         <div id="lowStockBanner" class="hidden bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center justify-between text-xs font-bold shadow-sm">
@@ -1147,59 +1128,6 @@
               <tbody id="scanTableBody"></tbody>
             </table>
           </div>
-        </div>
-
-        <!-- Tab: Plans & Subscription Pricing -->
-        <div id="tab-pricing" class="tab-content hidden space-y-6">
-          
-          <!-- Current Subscription Status Card -->
-          <div id="pricingStatusCard" class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <!-- Rendered dynamically by renderPricingTab() -->
-          </div>
-
-          <!-- Pricing Card & Gateway Launch -->
-          <div class="max-w-3xl mx-auto">
-            
-            <!-- Enterprise Plan Pricing Card & Gateway Launch -->
-            <div class="bg-white p-6 sm:p-8 rounded-2xl border-2 border-amber-400/80 shadow-md flex flex-col justify-between relative overflow-hidden">
-              <div class="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[10px] uppercase font-black px-3 py-1 rounded-bl-xl shadow-xs">Recommended Plan</div>
-              <div>
-                <div class="flex items-center gap-2 text-amber-600 font-black text-xs uppercase tracking-wider mb-2">
-                  <i class="fa-solid fa-crown text-base"></i> Full Enterprise License
-                </div>
-                <h3 class="text-2xl font-black text-slate-900">Yearly Subscription</h3>
-                <p class="text-xs text-slate-500 mt-1">Unlimited tax invoicing, statutory GST compliance, multi-branch inventory, and staff payroll.</p>
-                
-                <div class="my-6 p-4 bg-amber-50/60 rounded-xl border border-amber-200">
-                  <div class="text-xs text-slate-600 font-bold uppercase">Subscription Rate</div>
-                  <div class="flex items-baseline gap-2 mt-1">
-                    <span class="text-3xl font-black text-slate-900">Rs. 50,000</span>
-                    <span class="text-xs font-bold text-slate-500">/ year</span>
-                  </div>
-                  <div class="text-[11px] text-emerald-700 font-bold mt-1"><i class="fa-solid fa-circle-check"></i> Includes All Features, Live Gateway &amp; Free Upgrades</div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-semibold">
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>Unlimited Sales Tax Invoices</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>Unlimited Purchase Bills</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>Automatic 1-Click GST Returns</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>Multi-Store Stock Inventory</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>HR Attendance &amp; Payroll</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>Patient Clinical Records</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>WhatsApp &amp; SMS Reminders</span></div>
-                  <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-600 font-black"></i> <span>24/7 Priority Support</span></div>
-                </div>
-              </div>
-
-              <div class="mt-6 pt-4 border-t border-slate-100">
-                <button onclick="openPaymentGateway()" class="w-full py-4 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-sm shadow-xl transition flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-credit-card text-base"></i><span>Pay Rs 50,000 Now (Annual Gateway)</span>
-                </button>
-              </div>
-            </div>
-
-          </div>
-
         </div>
 
         <div id="tab-settings" class="tab-content hidden space-y-4">
