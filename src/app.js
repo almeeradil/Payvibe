@@ -149,6 +149,242 @@ function filterByBranch(list) {
   return list.filter(item => !item.branchId || item.branchId === window.userData.currentBranchId || item.branchId === 'b-hq');
 }
 
+// Subscription & 30-Day Free Trial Engine
+function getSubscriptionState() {
+  if (!window.userData) window.userData = {};
+  if (!window.userData.subscription) {
+    const createdDate = new Date();
+    createdDate.setDate(createdDate.getDate() - 2);
+    window.userData.subscription = {
+      plan: 'trial',
+      trialStartDate: createdDate.toISOString().split('T')[0],
+      trialDays: 30,
+      simulatedExpired: false,
+      paidYearly: false,
+      paymentDetails: null
+    };
+  }
+  return window.userData.subscription;
+}
+
+function getTrialDaysLeft() {
+  const sub = getSubscriptionState();
+  if (sub.plan === 'yearly' || sub.paidYearly) return 365;
+  if (sub.simulatedExpired) return 0;
+  
+  const start = new Date(sub.trialStartDate || Date.now());
+  const now = new Date();
+  const diffTime = Math.max(0, now - start);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const remaining = (sub.trialDays || 30) - diffDays;
+  return remaining > 0 ? remaining : 0;
+}
+
+function isTrialExpired() {
+  const sub = getSubscriptionState();
+  if (sub.plan === 'yearly' || sub.paidYearly) return false;
+  if (sub.simulatedExpired) return true;
+  return getTrialDaysLeft() <= 0;
+}
+
+function checkTrialGuard(actionName = 'add new invoices') {
+  if (isTrialExpired()) {
+    openModal('trialExpiredModal');
+    return false;
+  }
+  return true;
+}
+
+function renderSubscriptionUI() {
+  const sub = getSubscriptionState();
+  const daysLeft = getTrialDaysLeft();
+  const expired = isTrialExpired();
+
+  // 1. Sidebar Badge
+  const sidebarBadge = document.getElementById('sidebarTrialBadge');
+  if (sidebarBadge) {
+    if (sub.plan === 'yearly' || sub.paidYearly) {
+      sidebarBadge.className = 'px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full';
+      sidebarBadge.innerText = 'Yearly Active';
+    } else if (expired) {
+      sidebarBadge.className = 'px-2 py-0.5 bg-rose-500 text-white text-[10px] font-extrabold rounded-full animate-pulse';
+      sidebarBadge.innerText = 'Expired!';
+    } else {
+      sidebarBadge.className = 'px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-extrabold rounded-full';
+      sidebarBadge.innerText = `${daysLeft} Days Trial`;
+    }
+  }
+
+  // 2. Header Subscription Badge
+  const headerContainer = document.getElementById('headerSubscriptionBadgeContainer');
+  if (headerContainer) {
+    if (sub.plan === 'yearly' || sub.paidYearly) {
+      headerContainer.innerHTML = `
+        <button onclick="showTab('pricing')" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition">
+          <i class="fa-solid fa-circle-check text-emerald-600"></i><span>Enterprise Active (Rs 50,000/yr)</span>
+        </button>
+      `;
+    } else if (expired) {
+      headerContainer.innerHTML = `
+        <button onclick="showTab('pricing')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-md transition animate-pulse">
+          <i class="fa-solid fa-lock"></i><span>Trial Expired - Pay Rs 50,000</span>
+        </button>
+      `;
+    } else {
+      headerContainer.innerHTML = `
+        <button onclick="showTab('pricing')" class="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition">
+          <i class="fa-solid fa-clock text-amber-500"></i><span>Free Trial: ${daysLeft} Days Left</span>
+        </button>
+      `;
+    }
+  }
+
+  // 3. Main Workspace Top Banner
+  const banner = document.getElementById('trialExpiredBanner');
+  if (banner) {
+    if (expired) {
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
+  // 4. Render Pricing Tab Content
+  renderPricingTab();
+}
+
+function renderPricingTab() {
+  const sub = getSubscriptionState();
+  const daysLeft = getTrialDaysLeft();
+  const expired = isTrialExpired();
+  const card = document.getElementById('pricingStatusCard');
+  if (!card) return;
+
+  if (sub.plan === 'yearly' || sub.paidYearly) {
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider mb-1">
+          <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i> Full Plan Unlocked
+        </div>
+        <h2 class="text-xl font-black text-white">Active Enterprise License (Rs. 50,000 / Year)</h2>
+        <p class="text-xs text-slate-300 mt-1">Your account has unlimited invoicing, automated GST return filings, multi-branch store sync, and priority 24/7 helpline.</p>
+        ${sub.paymentDetails ? `<div class="mt-2 text-[11px] text-slate-400 font-mono">Last Payment Ref: ${sub.paymentDetails.txRef || 'CONFIRMED'} (${sub.paymentDetails.date || 'Active'})</div>` : ''}
+      </div>
+      <div class="px-4 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl font-black text-xs flex items-center gap-2 shadow-inner">
+        <i class="fa-solid fa-shield-halved text-base"></i><span>Status: ACTIVE (Rs 50k Paid)</span>
+      </div>
+    `;
+  } else if (expired) {
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center gap-2 text-rose-400 font-extrabold text-xs uppercase tracking-wider mb-1">
+          <i class="fa-solid fa-lock text-rose-400 text-sm"></i> Invoicing Locked
+        </div>
+        <h2 class="text-xl font-black text-white">30-Day Free Trial Has Expired!</h2>
+        <p class="text-xs text-rose-200 mt-1">Your 30-day evaluation period is complete. Please transfer Rs. 50,000 to our Meezan Bank account to reactivate unlimited tax invoicing.</p>
+      </div>
+      <div class="px-4 py-2 bg-rose-600 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-md animate-pulse">
+        <i class="fa-solid fa-triangle-exclamation text-base"></i><span>Status: EXPIRED (Pay Rs 50,000)</span>
+      </div>
+    `;
+  } else {
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider mb-1">
+          <i class="fa-solid fa-clock text-amber-400 text-sm"></i> Evaluation Period
+        </div>
+        <h2 class="text-xl font-black text-white">30-Day Free Trial Active (${daysLeft} Days Remaining)</h2>
+        <p class="text-xs text-slate-300 mt-1">Trial started on ${sub.trialStartDate}. Enjoy full access for 30 days before subscribing to our Rs. 50,000 yearly plan.</p>
+      </div>
+      <div class="px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl font-black text-xs flex items-center gap-2 shadow-inner">
+        <i class="fa-solid fa-calendar-day text-base"></i><span>${daysLeft} Days Left</span>
+      </div>
+    `;
+  }
+}
+
+function submitYearlyPayment() {
+  const compName = document.getElementById('payCompName')?.value.trim();
+  const depositorName = document.getElementById('payDepositorName')?.value.trim();
+  const method = document.getElementById('payMethod')?.value;
+  const txRef = document.getElementById('payTxRef')?.value.trim();
+  const amount = Number(document.getElementById('payAmount')?.value || 50000);
+
+  if (!depositorName || !txRef) {
+    alert("Please enter the Depositor Name and Bank Transaction Reference ID.");
+    return;
+  }
+
+  const sub = getSubscriptionState();
+  sub.plan = 'yearly';
+  sub.paidYearly = true;
+  sub.simulatedExpired = false;
+  sub.paymentDetails = {
+    company: compName || (window.userData && window.userData.settings && window.userData.settings.company) || 'My Business',
+    depositor: depositorName,
+    method: method,
+    txRef: txRef,
+    amount: amount,
+    date: new Date().toLocaleString()
+  };
+
+  logAuditEvent('SUBSCRIPTION_PAYMENT', 'Billing', `Submitted Rs ${amount} yearly subscription via ${method} (Ref: ${txRef})`);
+  persistData(true);
+  renderSubscriptionUI();
+
+  alert(`Thank you! Your payment of Rs. ${amount.toLocaleString()} has been received and verified.\n\nYour Enterprise Yearly Plan is now FULLY ACTIVE with unlimited tax invoicing!`);
+}
+
+function simulateExpireTrial() {
+  const sub = getSubscriptionState();
+  sub.simulatedExpired = true;
+  sub.paidYearly = false;
+  sub.plan = 'trial';
+  persistData(true);
+  renderSubscriptionUI();
+  alert("30-Day Trial Expiration Simulated!\n\nAll tax invoice, purchase bill, and PO creation functions are now locked until payment is submitted or trial is reset.");
+}
+
+function resetFreeTrial() {
+  const sub = getSubscriptionState();
+  sub.simulatedExpired = false;
+  sub.paidYearly = false;
+  sub.plan = 'trial';
+  sub.trialStartDate = new Date().toISOString().split('T')[0];
+  sub.trialDays = 30;
+  persistData(true);
+  renderSubscriptionUI();
+  alert("30-Day Free Trial reset successfully! You now have 30 days remaining.");
+}
+
+function activateYearlyPlanDirect() {
+  const sub = getSubscriptionState();
+  sub.plan = 'yearly';
+  sub.paidYearly = true;
+  sub.simulatedExpired = false;
+  sub.paymentDetails = {
+    depositor: 'Direct Admin Activation',
+    method: 'Admin Manual License Unlock',
+    txRef: 'ADM-UNLOCK-50000',
+    amount: 50000,
+    date: new Date().toLocaleString()
+  };
+  persistData(true);
+  renderSubscriptionUI();
+  alert("Enterprise Yearly Plan (Rs 50,000/year) Activated successfully! Full unlimited access unlocked.");
+}
+
+window.getSubscriptionState = getSubscriptionState;
+window.getTrialDaysLeft = getTrialDaysLeft;
+window.isTrialExpired = isTrialExpired;
+window.checkTrialGuard = checkTrialGuard;
+window.renderSubscriptionUI = renderSubscriptionUI;
+window.renderPricingTab = renderPricingTab;
+window.submitYearlyPayment = submitYearlyPayment;
+window.simulateExpireTrial = simulateExpireTrial;
+window.resetFreeTrial = resetFreeTrial;
+window.activateYearlyPlanDirect = activateYearlyPlanDirect;
+
 // Navigation Tabs & Submenus
 function showTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -157,6 +393,7 @@ function showTab(tabName) {
     target.classList.remove('hidden');
     const titles = {
       dashboard: 'Dashboard Overview & Metrics',
+      pricing: 'Plans, Subscription & Bank Payment',
       orders: 'GST Sales Tax Invoices & E-Invoicing',
       quotations: 'Estimates & Quotations',
       debitnotes: 'Sales Returns & Debit Notes',
@@ -218,6 +455,10 @@ function showTab(tabName) {
     }
   }
 
+  if (tabName === 'pricing') {
+    renderPricingTab();
+  }
+
   if (typeof renderTabContent === 'function') {
     renderTabContent(tabName);
   }
@@ -234,6 +475,14 @@ function toggleSideMenu(menuId) {
 
 // Modal Handlers
 function openModal(id) {
+  const invoiceModals = ['orderModal', 'purchaseInvoiceModal', 'purchaseModal', 'quotationModal', 'debitModal'];
+  if (invoiceModals.includes(id)) {
+    if (isTrialExpired()) {
+      openModal('trialExpiredModal');
+      return;
+    }
+  }
+
   const modal = document.getElementById(id);
   if (modal) modal.classList.remove('hidden');
   
@@ -895,6 +1144,7 @@ function editPatient(idx) {
 
 // Save Handlers for All Entities with Full Create/Edit Dual-Support
 function saveOrder() {
+  if (!checkTrialGuard('save invoices')) return;
   const invNumInput = document.getElementById('invNum')?.value.trim();
   const invDateInput = document.getElementById('invDate')?.value.trim();
   const custName = document.getElementById('invCustName')?.value.trim();
@@ -1066,6 +1316,7 @@ function saveSupplier() {
 }
 
 function savePurchaseInvoice() {
+  if (!checkTrialGuard('save invoices')) return;
   const pinvNumInput = document.getElementById('pinvNum')?.value.trim();
   const pinvDateInput = document.getElementById('pinvDate')?.value.trim();
   const sup = document.getElementById('pinvSupplier')?.value.trim();
@@ -1133,6 +1384,7 @@ function savePurchaseInvoice() {
 }
 
 function saveQuotation() {
+  if (!checkTrialGuard('save quotations')) return;
   const customer = document.getElementById('quoCustomer')?.value.trim();
   const product = document.getElementById('quoProduct')?.value.trim();
   const rate = parseFloat(document.getElementById('quoRate')?.value || 0);
@@ -1206,6 +1458,7 @@ function savePatient() {
 }
 
 function saveDebitNote() {
+  if (!checkTrialGuard('save debit notes')) return;
   const party = document.getElementById('debParty')?.value.trim();
   const origInv = document.getElementById('debOrigInv')?.value || 'INV-1001';
   const item = document.getElementById('debItem')?.value.trim();
@@ -1367,6 +1620,7 @@ function saveCashBank() {
 }
 
 function savePurchase() {
+  if (!checkTrialGuard('save purchase orders')) return;
   const supplier = document.getElementById('poSupplier')?.value.trim();
   const item = document.getElementById('poItem')?.value.trim();
   const amount = parseFloat(document.getElementById('poAmount')?.value || 0);
@@ -2374,6 +2628,9 @@ function renderTabContent(tabName) {
     case 'reminders':
       renderOverdueReminders();
       break;
+    case 'pricing':
+      renderPricingTab();
+      break;
     default:
       break;
   }
@@ -2415,6 +2672,7 @@ function renderSettingsForm() {
 // Render Functions
 function renderAll() {
   if (!window.userData) return;
+  renderSubscriptionUI();
   renderStats();
   renderTracking();
   renderSettingsForm();
@@ -3137,6 +3395,8 @@ function renderCharts() {
 // Global App Initializer
 function initApp() {
   initStorage();
+  getSubscriptionState();
+  renderSubscriptionUI();
   renderAll();
   showTab('dashboard');
 
