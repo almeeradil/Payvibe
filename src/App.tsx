@@ -630,8 +630,6 @@ export default function App() {
         onQuickRefresh={() => {}}
         searchTerm={globalSearchTerm}
         onSearchChange={setGlobalSearchTerm}
-        onVoiceInvoice={handleGlobalVoiceInvoice}
-        isVoiceListening={isVoiceListening}
       />
 
       {/* Main Content Layout with Sidebar */}
